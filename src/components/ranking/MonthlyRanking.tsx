@@ -81,17 +81,19 @@ export function MonthlyRanking({ availableMonths, currentUserId }: MonthlyRankin
 
       for (const r of rankings) {
         const existing = userMap.get(r.user_id);
-        const profile = r.profiles as { nickname: string; avatar_url: string | null };
+        // profiles pode vir como objeto ou array dependendo da query
+        const profileData = r.profiles;
+        const profile = Array.isArray(profileData) ? profileData[0] : profileData;
         
         if (existing) {
           existing.total_points += r.total_points;
           existing.picks_count += r.picks_count;
           existing.correct_picks += r.correct_picks;
-        } else {
+        } else if (profile) {
           userMap.set(r.user_id, {
             user_id: r.user_id,
-            nickname: profile.nickname,
-            avatar_url: profile.avatar_url,
+            nickname: profile.nickname || 'Usuário',
+            avatar_url: profile.avatar_url || null,
             total_points: r.total_points,
             picks_count: r.picks_count,
             correct_picks: r.correct_picks,
