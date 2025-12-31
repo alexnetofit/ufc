@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
-import { Shield, ShieldOff, Search } from 'lucide-react';
+import { Shield, ShieldOff, Search, Eye } from 'lucide-react';
 import { Input } from '@/components/ui';
 import type { UserSummary } from '@/types';
 
@@ -148,18 +149,27 @@ export function UsersTable({ users }: UsersTableProps) {
                   )}
                 </td>
                 <td className="px-4 py-4 text-right">
-                  <button
-                    onClick={() => toggleAdmin(user.user_id, user.is_admin)}
-                    disabled={loading === user.user_id}
-                    className={`p-2 rounded-lg transition-colors ${
-                      user.is_admin
-                        ? 'text-red-400 hover:bg-red-500/20'
-                        : 'text-green-400 hover:bg-green-500/20'
-                    } disabled:opacity-50`}
-                    title={user.is_admin ? 'Remover Admin' : 'Tornar Admin'}
-                  >
-                    {user.is_admin ? <ShieldOff size={18} /> : <Shield size={18} />}
-                  </button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Link
+                      href={`/admin/users/${user.user_id}`}
+                      className="p-2 rounded-lg text-ufc-gray-400 hover:text-white hover:bg-ufc-gray-700 transition-colors"
+                      title="Ver detalhes"
+                    >
+                      <Eye size={18} />
+                    </Link>
+                    <button
+                      onClick={() => toggleAdmin(user.user_id, user.is_admin)}
+                      disabled={loading === user.user_id}
+                      className={`p-2 rounded-lg transition-colors ${
+                        user.is_admin
+                          ? 'text-red-400 hover:bg-red-500/20'
+                          : 'text-green-400 hover:bg-green-500/20'
+                      } disabled:opacity-50`}
+                      title={user.is_admin ? 'Remover Admin' : 'Tornar Admin'}
+                    >
+                      {user.is_admin ? <ShieldOff size={18} /> : <Shield size={18} />}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

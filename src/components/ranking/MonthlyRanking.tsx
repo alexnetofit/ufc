@@ -38,13 +38,16 @@ export function MonthlyRanking({ availableMonths, currentUserId }: MonthlyRankin
   useEffect(() => {
     if (!selectedMonth) return;
 
+    // Capturar valores para evitar erro de TypeScript
+    const { year, month } = selectedMonth;
+
     async function fetchRanking() {
       setLoading(true);
       const supabase = createClient();
       
       // Calcular início e fim do mês
-      const startOfMonth = new Date(selectedMonth.year, selectedMonth.month - 1, 1).toISOString();
-      const endOfMonth = new Date(selectedMonth.year, selectedMonth.month, 0, 23, 59, 59).toISOString();
+      const startOfMonth = new Date(year, month - 1, 1).toISOString();
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59).toISOString();
 
       // Buscar rankings com eventos do mês
       const { data: rankings } = await supabase

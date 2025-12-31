@@ -85,6 +85,34 @@ export async function getEventWithFights(
 
   if (!event) return null;
 
+  // Buscar URLs das fotos dos lutadores
+  const fights = event.fights || [];
+  const fighterIds = fights.flatMap((f: { fighter1_id: number; fighter2_id: number }) => 
+    [f.fighter1_id, f.fighter2_id]
+  );
+
+  let fighterImages: Record<number, string | null> = {};
+  if (fighterIds.length > 0) {
+    const { data: fighters } = await supabase
+      .from('fighters')
+      .select('api_id, image_url')
+      .in('api_id', fighterIds);
+    
+    if (fighters) {
+      fighterImages = fighters.reduce((acc, f) => {
+        acc[f.api_id] = f.image_url;
+        return acc;
+      }, {} as Record<number, string | null>);
+    }
+  }
+
+  // Adicionar URLs de imagens às lutas
+  const fightsWithImages = fights.map((fight: { fighter1_id: number; fighter2_id: number }) => ({
+    ...fight,
+    fighter1_image_url: fighterImages[fight.fighter1_id] || null,
+    fighter2_image_url: fighterImages[fight.fighter2_id] || null,
+  }));
+
   // Buscar evento anterior para calcular se está aberto
   const { data: previousEvents } = await supabase
     .from('events')
@@ -104,6 +132,7 @@ export async function getEventWithFights(
 
   return {
     ...event,
+    fights: fightsWithImages,
     isOpenForPicks,
     opensAt,
   };
