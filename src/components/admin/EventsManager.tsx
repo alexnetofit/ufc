@@ -325,3 +325,4 @@ export function EventsManager({ events, upcomingCount, pastCount }: EventsManage
   );
 }
 
+

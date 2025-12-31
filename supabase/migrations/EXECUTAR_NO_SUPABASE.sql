@@ -376,3 +376,4 @@ ORDER BY p.created_at DESC;
 -- UPDATE profiles SET is_admin = true WHERE id = 'ID_RETORNADO';
 -- =====================================================
 
+

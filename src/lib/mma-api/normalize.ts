@@ -126,3 +126,4 @@ export function groupFightsByEvent(apiEvents: MMAAPIEvent[]): Map<string, MMAAPI
   return groups;
 }
 
+

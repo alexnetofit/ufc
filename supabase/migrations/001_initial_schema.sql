@@ -238,3 +238,4 @@ LEFT JOIN rankings r ON r.user_id = p.id
 GROUP BY p.id, p.nickname, p.avatar_url
 ORDER BY total_points DESC;
 
+

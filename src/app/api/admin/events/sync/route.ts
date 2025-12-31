@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getNextEvents, getFightsByDate } from '@/lib/mma-api/client';
 import { normalizeEvent, normalizeFights, groupFightsByEvent, extractEventDate } from '@/lib/mma-api/normalize';
+import { syncFighterImage } from '@/lib/supabase/storage';
 
 export async function POST() {
   try {
@@ -73,6 +74,10 @@ export async function POST() {
     let eventsCreated = 0;
     let fightsCreated = 0;
     let fightsUpdated = 0;
+    let fightersProcessed = 0;
+
+    // Set para rastrear lutadores já processados neste sync
+    const processedFighters = new Set<number>();
 
     for (const [eventName, fights] of eventGroups) {
       // Normalizar dados do evento
@@ -115,6 +120,19 @@ export async function POST() {
       const normalizedFights = normalizeFights(fights, eventId);
       
       for (const fight of normalizedFights) {
+        // Sincronizar fotos dos lutadores (apenas se ainda não processado neste sync)
+        if (!processedFighters.has(fight.fighter1_id)) {
+          await syncFighterImage(supabase, fight.fighter1_id, fight.fighter1_name);
+          processedFighters.add(fight.fighter1_id);
+          fightersProcessed++;
+        }
+        
+        if (!processedFighters.has(fight.fighter2_id)) {
+          await syncFighterImage(supabase, fight.fighter2_id, fight.fighter2_name);
+          processedFighters.add(fight.fighter2_id);
+          fightersProcessed++;
+        }
+
         // Verificar se a luta já existe (pelo api_id)
         const { data: existingFight } = await supabase
           .from('fights')
@@ -152,13 +170,14 @@ export async function POST() {
       }
     }
 
-    console.log(`[SYNC] Concluído: ${eventsCreated} eventos criados, ${fightsCreated} lutas criadas, ${fightsUpdated} lutas atualizadas`);
+    console.log(`[SYNC] Concluído: ${eventsCreated} eventos, ${fightsCreated} lutas criadas, ${fightsUpdated} atualizadas, ${fightersProcessed} lutadores`);
 
     return NextResponse.json({
       success: true,
       eventsCreated,
       fightsCreated,
       fightsUpdated,
+      fightersProcessed,
       totalEvents: eventGroups.size,
       totalFights: allFights.length,
     });

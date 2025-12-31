@@ -8,11 +8,12 @@ import { User } from 'lucide-react';
 interface FighterImageProps {
   fighterId: number;
   name: string;
+  imageUrl?: string | null; // URL do Supabase Storage
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
-export function FighterImage({ fighterId, name, size = 'md', className }: FighterImageProps) {
+export function FighterImage({ fighterId, name, imageUrl, size = 'md', className }: FighterImageProps) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -23,19 +24,30 @@ export function FighterImage({ fighterId, name, size = 'md', className }: Fighte
     xl: 'w-36 h-36',
   };
 
-  // Usar o proxy interno para buscar imagens com autenticação
-  const imageUrl = `/api/fighter-image/${fighterId}`;
+  // Se não tem URL ou deu erro, mostrar fallback com iniciais
+  if (!imageUrl || error) {
+    const initials = name
+      .split(' ')
+      .map(n => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
 
-  if (error) {
     return (
       <div
         className={cn(
-          'rounded-full bg-ufc-gray-700 flex items-center justify-center',
+          'rounded-full bg-ufc-gray-700 flex items-center justify-center border-2 border-ufc-gray-600',
           sizes[size],
           className
         )}
       >
-        <User className="w-1/2 h-1/2 text-ufc-gray-400" />
+        {initials ? (
+          <span className="font-oswald text-ufc-gray-300" style={{ fontSize: size === 'sm' ? '0.75rem' : size === 'md' ? '1rem' : '1.25rem' }}>
+            {initials}
+          </span>
+        ) : (
+          <User className="w-1/2 h-1/2 text-ufc-gray-400" />
+        )}
       </div>
     );
   }
@@ -55,7 +67,7 @@ export function FighterImage({ fighterId, name, size = 'md', className }: Fighte
         )}
         onLoad={() => setLoading(false)}
         onError={() => setError(true)}
-        unoptimized // Imagem vem do proxy
+        unoptimized
       />
     </div>
   );

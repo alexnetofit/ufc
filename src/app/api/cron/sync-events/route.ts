@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getNextEvents, getFightsByDate } from '@/lib/mma-api/client';
 import { normalizeEvent, normalizeFights, groupFightsByEvent, extractEventDate } from '@/lib/mma-api/normalize';
+import { syncFighterImage } from '@/lib/supabase/storage';
 
 // Usar service role para operações administrativas
 const supabaseAdmin = createClient(
@@ -80,6 +81,10 @@ export async function GET(request: NextRequest) {
     
     let eventsCreated = 0;
     let fightsCreated = 0;
+    let fightersProcessed = 0;
+
+    // Set para rastrear lutadores já processados neste sync
+    const processedFighters = new Set<number>();
 
     for (const [eventName, fights] of eventGroups) {
       const eventData = normalizeEvent(fights);
@@ -122,6 +127,19 @@ export async function GET(request: NextRequest) {
       const normalizedFights = normalizeFights(fights, eventId);
 
       for (const fight of normalizedFights) {
+        // Sincronizar fotos dos lutadores (apenas se ainda não processado neste sync)
+        if (!processedFighters.has(fight.fighter1_id)) {
+          await syncFighterImage(supabaseAdmin, fight.fighter1_id, fight.fighter1_name);
+          processedFighters.add(fight.fighter1_id);
+          fightersProcessed++;
+        }
+        
+        if (!processedFighters.has(fight.fighter2_id)) {
+          await syncFighterImage(supabaseAdmin, fight.fighter2_id, fight.fighter2_name);
+          processedFighters.add(fight.fighter2_id);
+          fightersProcessed++;
+        }
+
         const { data: existingFight } = await supabaseAdmin
           .from('fights')
           .select('id')
@@ -154,13 +172,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`[CRON] Concluído: ${eventsCreated} eventos, ${fightsCreated} lutas`);
+    console.log(`[CRON] Concluído: ${eventsCreated} eventos, ${fightsCreated} lutas, ${fightersProcessed} lutadores`);
 
     return NextResponse.json({
       success: true,
       message: 'Sincronização concluída',
       eventsCreated,
       fightsCreated,
+      fightersProcessed,
       totalFights: allFights.length,
     });
 

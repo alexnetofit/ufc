@@ -127,3 +127,4 @@ export function RankingTable({ rankings, startPosition = 1, currentUserId }: Ran
   );
 }
 
+

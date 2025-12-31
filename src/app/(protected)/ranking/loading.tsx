@@ -4,3 +4,4 @@ export default function RankingLoading() {
   return <RankingSkeleton />;
 }
 
+

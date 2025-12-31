@@ -8,10 +8,13 @@ import type { Fight, Pick, FightStatus } from '@/types';
 import { CheckCircle, Clock, AlertCircle, Ban, Lock } from 'lucide-react';
 
 interface FightCardProps {
-  fight: Fight;
+  fight: Fight & {
+    fighter1_image_url?: string | null;
+    fighter2_image_url?: string | null;
+  };
   userPick?: Pick;
   showPickButton?: boolean;
-  isEventOpen?: boolean; // Se o evento está aberto para palpites
+  isEventOpen?: boolean;
 }
 
 const statusConfig: Record<FightStatus, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'info'; icon: React.ReactNode }> = {
@@ -21,14 +24,21 @@ const statusConfig: Record<FightStatus, { label: string; variant: 'default' | 's
   cancelled: { label: 'Cancelada', variant: 'default', icon: <Ban size={12} /> },
 };
 
+// Construir URL do Storage baseado no fighter_id
+function getFighterStorageUrl(fighterId: number): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return `${supabaseUrl}/storage/v1/object/public/fighters/${fighterId}.png`;
+}
+
 export function FightCard({ fight, userPick, showPickButton = true, isEventOpen = true }: FightCardProps) {
   const status = statusConfig[fight.status];
-  // Pode palpitar se: evento está aberto E luta fecha em mais de 1h E status é scheduled
   const canPick = isEventOpen && canMakePick(fight.scheduled_for) && fight.status === 'scheduled';
   const hasPick = !!userPick;
-
-  // Determinar vencedor para destacar
   const winner = fight.winner_code;
+
+  // Usar URL passada ou construir do Storage
+  const fighter1ImageUrl = fight.fighter1_image_url || getFighterStorageUrl(fight.fighter1_id);
+  const fighter2ImageUrl = fight.fighter2_image_url || getFighterStorageUrl(fight.fighter2_id);
   
   return (
     <Card variant={hasPick ? 'highlight' : 'hover'} className="overflow-hidden">
@@ -63,6 +73,7 @@ export function FightCard({ fight, userPick, showPickButton = true, isEventOpen 
             <FighterImage
               fighterId={fight.fighter1_id}
               name={fight.fighter1_name}
+              imageUrl={fighter1ImageUrl}
               size="lg"
               className={cn(
                 winner === 1 && 'ring-4 ring-green-500',
@@ -107,6 +118,7 @@ export function FightCard({ fight, userPick, showPickButton = true, isEventOpen 
             <FighterImage
               fighterId={fight.fighter2_id}
               name={fight.fighter2_name}
+              imageUrl={fighter2ImageUrl}
               size="lg"
               className={cn(
                 winner === 2 && 'ring-4 ring-green-500',

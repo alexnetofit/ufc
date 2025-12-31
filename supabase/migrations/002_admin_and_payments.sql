@@ -220,3 +220,4 @@ FROM profiles p
 LEFT JOIN global_ranking gr ON gr.user_id = p.id
 ORDER BY p.created_at DESC;
 
+
