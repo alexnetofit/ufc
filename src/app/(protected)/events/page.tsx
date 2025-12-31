@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { getAllEventsWithCounts } from '@/lib/queries/events';
+import { getUpcomingEventsWithCounts } from '@/lib/queries/events';
 import { EventCard } from '@/components/events/EventCard';
 import { Card } from '@/components/ui';
 import { Calendar } from 'lucide-react';
@@ -10,18 +10,11 @@ export default async function EventsPage() {
 
   if (!user) return null;
 
-  // Buscar eventos otimizado
-  const events = await getAllEventsWithCounts(supabase, user.id);
+  // Buscar próximos 4 eventos
+  const events = await getUpcomingEventsWithCounts(supabase, user.id, 4);
 
-  // Separar eventos futuros e passados
-  const now = new Date();
-  const upcomingEvents = events
-    .filter(e => new Date(e.scheduled_date) >= now)
-    .sort((a, b) => 
-      new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
-    );
-  
-  const pastEvents = events.filter(e => new Date(e.scheduled_date) < now);
+  const currentEvent = events[0];
+  const nextEvents = events.slice(1, 4);
 
   return (
     <div className="space-y-8">
@@ -31,38 +24,30 @@ export default async function EventsPage() {
           EVENTOS
         </h1>
         <p className="text-ufc-gray-400 mt-1">
-          Todos os eventos do UFC disponíveis para palpites
+          Próximos eventos do UFC disponíveis para palpites
         </p>
       </div>
 
-      {/* Próximos Eventos */}
-      {upcomingEvents.length > 0 && (
+      {/* Evento Atual em Destaque */}
+      {currentEvent && (
         <section>
           <h2 className="font-oswald text-xl text-white mb-4 flex items-center gap-2">
             <span className="w-1 h-6 bg-ufc-red rounded"></span>
-            PRÓXIMOS EVENTOS ({upcomingEvents.length})
+            EVENTO ATUAL
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcomingEvents.map((event, index) => (
-              <EventCard 
-                key={event.id} 
-                event={event} 
-                isHighlight={index === 0}
-              />
-            ))}
-          </div>
+          <EventCard event={currentEvent} isHighlight />
         </section>
       )}
 
-      {/* Eventos Passados */}
-      {pastEvents.length > 0 && (
+      {/* Próximos 3 Eventos */}
+      {nextEvents.length > 0 && (
         <section>
           <h2 className="font-oswald text-xl text-white mb-4 flex items-center gap-2">
             <span className="w-1 h-6 bg-ufc-gray-600 rounded"></span>
-            EVENTOS ANTERIORES ({pastEvents.length})
+            PRÓXIMOS EVENTOS
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pastEvents.map((event) => (
+          <div className="grid md:grid-cols-3 gap-4">
+            {nextEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
@@ -77,7 +62,7 @@ export default async function EventsPage() {
             Nenhum evento encontrado
           </h3>
           <p className="text-ufc-gray-400">
-            Aguarde! Novos eventos serão sincronizados automaticamente toda segunda-feira.
+            Aguarde! Novos eventos serão sincronizados automaticamente.
           </p>
         </Card>
       )}

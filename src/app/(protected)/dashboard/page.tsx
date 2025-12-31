@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
-import { getUpcomingEventsWithFights, getUserStats } from '@/lib/queries/dashboard';
+import { getNextEventWithFights, getUserStats, getUserEventHistory } from '@/lib/queries/dashboard';
 import { EventCard } from '@/components/events/EventCard';
 import { Card, CardContent } from '@/components/ui';
-import { Calendar, Trophy, Target, TrendingUp } from 'lucide-react';
+import { Calendar, Trophy, Target, TrendingUp, History, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -12,13 +14,11 @@ export default async function DashboardPage() {
   if (!user) return null;
 
   // Buscar dados em paralelo
-  const [events, stats] = await Promise.all([
-    getUpcomingEventsWithFights(supabase, user.id),
+  const [nextEvent, stats, history] = await Promise.all([
+    getNextEventWithFights(supabase, user.id),
     getUserStats(supabase, user.id),
+    getUserEventHistory(supabase, user.id),
   ]);
-
-  const nextEvent = events[0];
-  const otherEvents = events.slice(1);
 
   return (
     <div className="space-y-8">
@@ -102,23 +102,8 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Outros Eventos */}
-      {otherEvents.length > 0 && (
-        <section>
-          <h2 className="font-oswald text-xl text-white mb-4 flex items-center gap-2">
-            <span className="w-1 h-6 bg-ufc-gray-600 rounded"></span>
-            PRÓXIMOS EVENTOS
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {otherEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Sem eventos */}
-      {events.length === 0 && (
+      {!nextEvent && (
         <Card className="py-12 text-center">
           <Calendar className="mx-auto text-ufc-gray-500 mb-4" size={48} />
           <h3 className="font-oswald text-xl text-white mb-2">
@@ -129,6 +114,61 @@ export default async function DashboardPage() {
           </p>
         </Card>
       )}
+
+      {/* Histórico de Pontuações */}
+      <section>
+        <h2 className="font-oswald text-xl text-white mb-4 flex items-center gap-2">
+          <span className="w-1 h-6 bg-ufc-gold rounded"></span>
+          MEU HISTÓRICO
+        </h2>
+
+        {history.length > 0 ? (
+          <div className="space-y-3">
+            {history.map((item) => (
+              <Card key={item.event_id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-lg bg-ufc-gray-800">
+                      <History className="text-ufc-gray-400" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-oswald text-white">{item.event_name}</h3>
+                      <p className="text-ufc-gray-500 text-sm">
+                        {format(new Date(item.event_date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 text-green-500">
+                        <CheckCircle size={14} />
+                        <span className="text-sm">{item.correct_picks}/{item.picks_count}</span>
+                      </div>
+                      <p className="text-ufc-gray-500 text-xs">acertos</p>
+                    </div>
+                    
+                    <div className="text-right min-w-[60px]">
+                      <p className="font-bebas text-2xl text-ufc-gold">{item.total_points}</p>
+                      <p className="text-ufc-gray-500 text-xs">pontos</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="py-8 text-center">
+            <History className="mx-auto text-ufc-gray-500 mb-3" size={32} />
+            <p className="text-ufc-gray-400">
+              Você ainda não tem histórico de pontuações.
+            </p>
+            <p className="text-ufc-gray-500 text-sm mt-1">
+              Faça palpites em eventos para começar!
+            </p>
+          </Card>
+        )}
+      </section>
 
       {/* Quick Links */}
       <section className="grid md:grid-cols-2 gap-4">
@@ -155,9 +195,9 @@ export default async function DashboardPage() {
                 <Calendar className="text-ufc-red" size={32} />
               </div>
               <div>
-                <h3 className="font-oswald text-lg text-white">Todos os Eventos</h3>
+                <h3 className="font-oswald text-lg text-white">Próximos Eventos</h3>
                 <p className="text-ufc-gray-400 text-sm">
-                  Veja todos os eventos e faça seus palpites
+                  Veja os eventos e faça seus palpites
                 </p>
               </div>
             </div>

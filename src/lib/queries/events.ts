@@ -13,19 +13,22 @@ export interface EventWithStatus {
   opensAt: Date | null;
 }
 
-// Buscar todos os eventos com contagem de lutas e status de abertura
-export async function getAllEventsWithCounts(
+// Buscar próximos 4 eventos com contagem de lutas e status de abertura
+export async function getUpcomingEventsWithCounts(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  limit: number = 4
 ): Promise<EventWithStatus[]> {
-  // Buscar eventos com lutas em uma única query
+  // Buscar apenas eventos futuros com lutas
   const { data: events } = await supabase
     .from('events')
     .select(`
       *,
       fights(id)
     `)
-    .order('scheduled_date', { ascending: true });
+    .gte('scheduled_date', new Date().toISOString())
+    .order('scheduled_date', { ascending: true })
+    .limit(limit);
 
   if (!events) return [];
 
@@ -42,27 +45,11 @@ export async function getAllEventsWithCounts(
     userPicks = data || [];
   }
 
-  // Filtrar apenas eventos futuros para calcular abertura
-  const now = new Date();
-  const futureEvents = events.filter(e => new Date(e.scheduled_date) > now);
-  
   return events.map((event, index) => {
-    // Encontrar o evento anterior (para eventos futuros)
-    let previousEventDate: string | null = null;
+    // Primeiro evento: sempre aberto, demais: abrem 1 dia após o anterior
+    const previousEventDate = index > 0 ? events[index - 1].scheduled_date : null;
     
-    if (new Date(event.scheduled_date) > now) {
-      // Para eventos futuros, pegar o evento anterior na lista de futuros
-      const futureIndex = futureEvents.findIndex(e => e.id === event.id);
-      if (futureIndex > 0) {
-        previousEventDate = futureEvents[futureIndex - 1].scheduled_date;
-      }
-      // Se é o primeiro evento futuro, previousEventDate fica null (sempre aberto)
-    }
-    
-    const isOpenForPicks = new Date(event.scheduled_date) <= now 
-      ? false // Eventos passados não aceitam palpites
-      : canEventReceivePicks(event.scheduled_date, previousEventDate);
-    
+    const isOpenForPicks = canEventReceivePicks(event.scheduled_date, previousEventDate);
     const opensAt = previousEventDate ? getEventOpensAt(previousEventDate) : null;
 
     return {
