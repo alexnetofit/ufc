@@ -90,14 +90,20 @@ export async function getUserEventHistory(
 
   if (!data) return [];
 
-  return data.map((r) => ({
-    event_id: r.event_id,
-    event_name: (r.events as { name: string }).name,
-    event_date: (r.events as { scheduled_date: string }).scheduled_date,
-    total_points: r.total_points,
-    picks_count: r.picks_count,
-    correct_picks: r.correct_picks,
-  }));
+  return data.map((r) => {
+    // events pode vir como objeto ou array dependendo da query
+    const eventData = r.events;
+    const event = Array.isArray(eventData) ? eventData[0] : eventData;
+    
+    return {
+      event_id: r.event_id,
+      event_name: event?.name || 'Evento',
+      event_date: event?.scheduled_date || '',
+      total_points: r.total_points,
+      picks_count: r.picks_count,
+      correct_picks: r.correct_picks,
+    };
+  });
 }
 
 // Buscar estatísticas do usuário
