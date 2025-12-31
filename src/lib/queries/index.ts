@@ -1,3 +1,3 @@
-export { getUpcomingEventsWithFights, getUserStats } from './dashboard';
-export { getAllEventsWithCounts, getEventWithFights, getEventWithUserPicks } from './events';
-export { getGlobalRanking } from './ranking';
+export { getNextEventWithFights, getUserStats, getUserEventHistory } from './dashboard';
+export { getUpcomingEventsWithCounts, getEventWithFights, getEventWithUserPicks } from './events';
+export { getGlobalRanking, getMonthlyRanking, getAvailableMonths } from './ranking';
