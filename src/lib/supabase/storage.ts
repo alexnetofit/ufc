@@ -125,18 +125,11 @@ export async function syncFighterImage(
       return existingFighter.image_url;
     }
 
-    // 2. Baixar foto da API (pode falhar, não é crítico)
-    let imageUrl: string | null = null;
-    try {
-      const imageData = await downloadFighterImage(fighterId);
-      if (imageData) {
-        imageUrl = await uploadFighterImage(supabase, fighterId, imageData);
-      }
-    } catch (e) {
-      console.log(`[Storage] Não foi possível baixar foto do fighter ${fighterId}`);
-    }
+    // 2. Usar URL direta da API (como fazíamos antes)
+    // A imagem será buscada via proxy quando exibida
+    const imageUrl = `/api/fighter-image/${fighterId}`;
 
-    // 3. Salvar no banco (com ou sem foto)
+    // 3. Salvar no banco
     const { error: upsertError } = await supabase
       .from('fighters')
       .upsert({

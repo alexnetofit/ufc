@@ -24,10 +24,9 @@ const statusConfig: Record<FightStatus, { label: string; variant: 'default' | 's
   cancelled: { label: 'Cancelada', variant: 'default', icon: <Ban size={12} /> },
 };
 
-// Construir URL do Storage baseado no fighter_id
-function getFighterStorageUrl(fighterId: number): string {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return `${supabaseUrl}/storage/v1/object/public/fighters/${fighterId}.png`;
+// Construir URL do proxy de imagem baseado no fighter_id
+function getFighterImageUrl(fighterId: number): string {
+  return `/api/fighter-image/${fighterId}`;
 }
 
 export function FightCard({ fight, userPick, showPickButton = true, isEventOpen = true }: FightCardProps) {
@@ -36,9 +35,9 @@ export function FightCard({ fight, userPick, showPickButton = true, isEventOpen 
   const hasPick = !!userPick;
   const winner = fight.winner_code;
 
-  // Usar URL passada ou construir do Storage
-  const fighter1ImageUrl = fight.fighter1_image_url || getFighterStorageUrl(fight.fighter1_id);
-  const fighter2ImageUrl = fight.fighter2_image_url || getFighterStorageUrl(fight.fighter2_id);
+  // Usar URL passada ou construir do proxy
+  const fighter1ImageUrl = fight.fighter1_image_url || getFighterImageUrl(fight.fighter1_id);
+  const fighter2ImageUrl = fight.fighter2_image_url || getFighterImageUrl(fight.fighter2_id);
   
   return (
     <Card variant={hasPick ? 'highlight' : 'hover'} className="overflow-hidden">
