@@ -120,17 +120,25 @@ export async function POST() {
       const normalizedFights = normalizeFights(fights, eventId);
       
       for (const fight of normalizedFights) {
-        // Sincronizar fotos dos lutadores (apenas se ainda não processado neste sync)
+        // Sincronizar fotos dos lutadores (com try/catch para não quebrar o sync)
         if (!processedFighters.has(fight.fighter1_id)) {
-          await syncFighterImage(supabase, fight.fighter1_id, fight.fighter1_name);
+          try {
+            await syncFighterImage(supabase, fight.fighter1_id, fight.fighter1_name);
+            fightersProcessed++;
+          } catch (e) {
+            console.error(`[SYNC] Erro ao sincronizar foto do fighter ${fight.fighter1_id}:`, e);
+          }
           processedFighters.add(fight.fighter1_id);
-          fightersProcessed++;
         }
         
         if (!processedFighters.has(fight.fighter2_id)) {
-          await syncFighterImage(supabase, fight.fighter2_id, fight.fighter2_name);
+          try {
+            await syncFighterImage(supabase, fight.fighter2_id, fight.fighter2_name);
+            fightersProcessed++;
+          } catch (e) {
+            console.error(`[SYNC] Erro ao sincronizar foto do fighter ${fight.fighter2_id}:`, e);
+          }
           processedFighters.add(fight.fighter2_id);
-          fightersProcessed++;
         }
 
         // Verificar se a luta já existe (pelo api_id)

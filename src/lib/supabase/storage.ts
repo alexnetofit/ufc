@@ -107,54 +107,54 @@ export async function syncFighterImage(
   fighterId: number,
   fighterName: string
 ): Promise<string | null> {
-  // 1. Verificar se fighter já existe no banco
-  const { data: existingFighter } = await supabase
-    .from('fighters')
-    .select('id, image_url')
-    .eq('api_id', fighterId)
-    .single();
-
-  if (existingFighter) {
-    // Atualizar updated_at para indicar que ainda está ativo
-    await supabase
+  try {
+    // 1. Verificar se fighter já existe no banco
+    const { data: existingFighter, error: selectError } = await supabase
       .from('fighters')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', existingFighter.id);
+      .select('id, image_url')
+      .eq('api_id', fighterId)
+      .single();
 
-    return existingFighter.image_url;
-  }
+    // Se existe, apenas atualizar updated_at
+    if (existingFighter && !selectError) {
+      await supabase
+        .from('fighters')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', existingFighter.id);
 
-  // 2. Baixar foto da API
-  const imageData = await downloadFighterImage(fighterId);
-  
-  if (!imageData) {
-    // Criar registro sem foto
-    await supabase
+      return existingFighter.image_url;
+    }
+
+    // 2. Baixar foto da API (pode falhar, não é crítico)
+    let imageUrl: string | null = null;
+    try {
+      const imageData = await downloadFighterImage(fighterId);
+      if (imageData) {
+        imageUrl = await uploadFighterImage(supabase, fighterId, imageData);
+      }
+    } catch (e) {
+      console.log(`[Storage] Não foi possível baixar foto do fighter ${fighterId}`);
+    }
+
+    // 3. Salvar no banco (com ou sem foto)
+    const { error: upsertError } = await supabase
       .from('fighters')
       .upsert({
         api_id: fighterId,
         name: fighterName,
-        image_url: null,
+        image_url: imageUrl,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'api_id' });
 
+    if (upsertError) {
+      console.error(`[Storage] Erro ao salvar fighter ${fighterId}:`, upsertError);
+    }
+
+    return imageUrl;
+  } catch (error) {
+    console.error(`[Storage] Erro geral no syncFighterImage ${fighterId}:`, error);
     return null;
   }
-
-  // 3. Upload para o Storage
-  const imageUrl = await uploadFighterImage(supabase, fighterId, imageData);
-
-  // 4. Salvar no banco
-  await supabase
-    .from('fighters')
-    .upsert({
-      api_id: fighterId,
-      name: fighterName,
-      image_url: imageUrl,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'api_id' });
-
-  return imageUrl;
 }
 
 /**
