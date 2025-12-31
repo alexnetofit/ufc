@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { getEventWithUserPicks } from '@/lib/queries/events';
 import { FightCard } from '@/components/fights/FightCard';
 import { Badge } from '@/components/ui';
+import { PixCheckout } from '@/components/pix';
 import { formatDate, formatRelative } from '@/lib/utils/date';
-import { ArrowLeft, Calendar, MapPin, Swords, Lock, Unlock } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Swords, Lock, Unlock, CheckCircle2 } from 'lucide-react';
 import type { Fight, Pick } from '@/types';
 
 interface EventPageProps {
@@ -28,6 +29,16 @@ export default async function EventPage({ params }: EventPageProps) {
   if (!event) {
     notFound();
   }
+
+  // Verificar se usuário já tem entrada paga
+  const { data: eventEntry } = await supabase
+    .from('event_entries')
+    .select('id, amount, created_at')
+    .eq('user_id', user.id)
+    .eq('event_id', id)
+    .single();
+
+  const hasPaidEntry = !!eventEntry;
 
   // Criar mapa de palpites
   const picksMap = new Map<string, Pick>();
@@ -107,14 +118,48 @@ export default async function EventPage({ params }: EventPageProps) {
           )}
 
           {isEventOpen && (
-            <div className="mt-4">
+            <div className="mt-4 flex items-center gap-3">
               <Badge variant={totalPicks === totalFights ? 'success' : 'warning'} size="md">
                 {totalPicks}/{totalFights} palpites feitos
               </Badge>
+              {hasPaidEntry && (
+                <Badge variant="success" size="md" className="flex items-center gap-1">
+                  <CheckCircle2 size={14} />
+                  ENTRADA CONFIRMADA
+                </Badge>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Seção de Pagamento PIX */}
+      {isEventOpen && !hasPaidEntry && (
+        <section>
+          <h2 className="font-oswald text-xl text-white mb-4 flex items-center gap-2">
+            <span className="w-1 h-6 bg-ufc-gold rounded"></span>
+            PARTICIPAR DO EVENTO
+          </h2>
+          <div className="max-w-md">
+            <PixCheckout eventId={id} eventName={event.name} />
+          </div>
+        </section>
+      )}
+
+      {/* Entrada Confirmada - Banner */}
+      {hasPaidEntry && (
+        <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="text-green-500" size={24} />
+          </div>
+          <div>
+            <h3 className="font-oswald text-lg text-white">Participação Confirmada!</h3>
+            <p className="text-green-400 text-sm">
+              Você pagou R$ {((eventEntry?.amount || 0) / 100).toFixed(2)} para participar deste evento.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Card */}
       {mainCard.length > 0 && (

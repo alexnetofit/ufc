@@ -290,3 +290,87 @@ export interface PaymentWithProfile extends Payment {
   confirmed_by_nickname: string | null;
 }
 
+// ========================================
+// PIX PAYMENT TYPES (AbacatePay)
+// ========================================
+
+export type PixPaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+
+export type PaymentPlan = '5' | '10' | '20';
+
+export const PAYMENT_PLAN_AMOUNTS: Record<PaymentPlan, number> = {
+  '5': 500,   // R$ 5,00 em centavos
+  '10': 1000, // R$ 10,00 em centavos
+  '20': 2000, // R$ 20,00 em centavos
+};
+
+export const PAYMENT_PLAN_LABELS: Record<PaymentPlan, string> = {
+  '5': 'R$ 5,00',
+  '10': 'R$ 10,00',
+  '20': 'R$ 20,00',
+};
+
+export interface PixPayment {
+  id: string;
+  user_id: string;
+  event_id: string;
+  amount: number; // Em centavos
+  pix_id: string; // ID da AbacatePay
+  status: PixPaymentStatus;
+  br_code: string; // Código copia e cola
+  br_code_base64: string | null; // QR Code em base64
+  created_at: string;
+  expires_at: string;
+  paid_at: string | null;
+  // Joins
+  event?: Event;
+  profile?: Profile;
+}
+
+export interface EventEntry {
+  id: string;
+  user_id: string;
+  event_id: string;
+  amount: number; // Valor pago em centavos
+  pix_payment_id: string | null;
+  created_at: string;
+  // Joins
+  event?: Event;
+  profile?: Profile;
+}
+
+export interface PixPaymentWithDetails extends PixPayment {
+  nickname: string;
+  avatar_url: string | null;
+  event_name: string;
+  event_date: string;
+}
+
+export interface EventEntryWithDetails extends EventEntry {
+  nickname: string;
+  avatar_url: string | null;
+  event_name: string;
+  event_date: string;
+}
+
+// Response types para API
+export interface CreatePixResponse {
+  success: boolean;
+  payment?: PixPayment;
+  error?: string;
+}
+
+export interface CheckPixResponse {
+  success: boolean;
+  status?: PixPaymentStatus;
+  paid_at?: string;
+  error?: string;
+}
+
+export interface ActivePixResponse {
+  success: boolean;
+  payment?: PixPayment | null;
+  hasEntry?: boolean; // Se já tem entrada confirmada
+  error?: string;
+}
+
