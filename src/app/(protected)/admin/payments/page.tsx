@@ -1,6 +1,15 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { Card } from '@/components/ui';
 import { PaymentsTable } from '@/components/admin/PaymentsTable';
+
+// Cliente admin para bypassar RLS
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
 
 interface PixPaymentWithDetails {
   id: string;
@@ -16,7 +25,7 @@ interface PixPaymentWithDetails {
 }
 
 async function getPixPayments(): Promise<PixPaymentWithDetails[]> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
   
   const { data, error } = await supabase
     .from('pix_payments')
