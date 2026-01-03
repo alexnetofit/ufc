@@ -15,6 +15,7 @@ interface FightCardProps {
   userPick?: Pick;
   showPickButton?: boolean;
   isEventOpen?: boolean;
+  hasPaidEntry?: boolean;
 }
 
 const statusConfig: Record<FightStatus, { label: string; variant: 'default' | 'success' | 'warning' | 'error' | 'info'; icon: React.ReactNode }> = {
@@ -29,9 +30,9 @@ function getFighterImageUrl(fighterId: number): string {
   return `/api/fighter-image/${fighterId}`;
 }
 
-export function FightCard({ fight, userPick, showPickButton = true, isEventOpen = true }: FightCardProps) {
+export function FightCard({ fight, userPick, showPickButton = true, isEventOpen = true, hasPaidEntry = true }: FightCardProps) {
   const status = statusConfig[fight.status];
-  const canPick = isEventOpen && canMakePick(fight.scheduled_for) && fight.status === 'scheduled';
+  const canPick = isEventOpen && canMakePick(fight.scheduled_for) && fight.status === 'scheduled' && hasPaidEntry;
   const hasPick = !!userPick;
   const winner = fight.winner_code;
 
@@ -198,6 +199,11 @@ export function FightCard({ fight, userPick, showPickButton = true, isEventOpen 
             >
               {hasPick ? 'EDITAR PALPITE' : 'FAZER PALPITE'}
             </Link>
+          ) : !hasPaidEntry && isEventOpen && fight.status === 'scheduled' ? (
+            <div className="w-full py-3 rounded-lg text-center bg-ufc-gold/20 text-ufc-gold font-medium flex items-center justify-center gap-2">
+              <Lock size={16} />
+              Pague para liberar palpites
+            </div>
           ) : !isEventOpen && fight.status === 'scheduled' ? (
             <div className="w-full py-3 rounded-lg text-center bg-yellow-500/20 text-yellow-400 font-medium flex items-center justify-center gap-2">
               <Lock size={16} />

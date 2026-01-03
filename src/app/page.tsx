@@ -17,12 +17,11 @@ export default function Home() {
       <div className="relative z-10 text-center px-4 py-[30px]">
         {/* Logo */}
         <div className="mb-8">
-          <h1 className="font-bebas text-7xl md:text-9xl text-white tracking-wider">
-            FANTASY
-          </h1>
-          <h2 className="font-bebas text-5xl md:text-7xl text-ufc-red -mt-4">
-            MMA
-          </h2>
+          <img 
+            src="/logo-sigma-ufc.png" 
+            alt="Sigma UFC" 
+            className="h-32 md:h-48 w-auto mx-auto"
+          />
         </div>
 
         {/* Tagline */}
@@ -80,7 +79,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="absolute bottom-4 text-ufc-gray-500 text-sm">
-        © 2025 Fantasy MMA - Não é betting, é diversão!
+        © 2025 Sigma UFC - Não é betting, é diversão!
       </footer>
     </main>
   );

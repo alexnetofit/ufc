@@ -109,7 +109,7 @@ export default function RegisterPage() {
           .eq('id', authData.user.id);
       }
 
-      toast.success('Conta criada com sucesso! Bem-vindo ao Fantasy MMA!');
+      toast.success('Conta criada com sucesso! Bem-vindo ao Sigma UFC!');
       router.push('/dashboard');
       router.refresh();
     } catch (error) {
@@ -125,7 +125,7 @@ export default function RegisterPage() {
         CRIAR CONTA
       </h1>
       <p className="text-ufc-gray-400 text-center mb-8">
-        Entre para o octógono do Fantasy MMA
+        Entre para o octógono do Sigma UFC
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -198,5 +198,7 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+
 
 

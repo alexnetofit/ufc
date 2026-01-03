@@ -34,3 +34,5 @@ COMMENT ON COLUMN fighters.updated_at IS 'Última vez que o lutador apareceu em 
 -- =============================================
 
 
+
+

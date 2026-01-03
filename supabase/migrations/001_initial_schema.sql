@@ -239,3 +239,5 @@ GROUP BY p.id, p.nickname, p.avatar_url
 ORDER BY total_points DESC;
 
 
+
+

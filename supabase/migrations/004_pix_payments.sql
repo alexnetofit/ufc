@@ -157,3 +157,5 @@ FROM event_entries ee
 JOIN profiles p ON p.id = ee.user_id
 JOIN events e ON e.id = ee.event_id;
 
+
+

@@ -1,6 +1,6 @@
-# Fantasy MMA
+# Sigma UFC
 
-Um SaaS de Fantasy MMA estilo UFC Fantasy, onde usuários fazem palpites em lutas do UFC e competem por pontos no ranking.
+Um SaaS de palpites do UFC, onde usuários fazem palpites em lutas do UFC e competem por pontos no ranking.
 
 ## Stack
 
@@ -35,7 +35,7 @@ Um SaaS de Fantasy MMA estilo UFC Fantasy, onde usuários fazem palpites em luta
 
 ```bash
 git clone <repo-url>
-cd fantasy-mma
+cd sigma-ufc
 ```
 
 ### 2. Instalar dependências
@@ -130,5 +130,7 @@ src/
 ## Licença
 
 MIT
+
+
 
 

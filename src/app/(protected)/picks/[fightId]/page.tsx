@@ -50,6 +50,18 @@ export default async function PickPage({ params }: PickPageProps) {
     redirect(`/events/${fight.event_id}?error=event_not_open`);
   }
 
+  // Verificar se usuário pagou para participar do evento
+  const { data: eventEntry } = await supabase
+    .from('event_entries')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('event_id', fight.event_id)
+    .single();
+
+  if (!eventEntry) {
+    redirect(`/events/${fight.event_id}?error=payment_required`);
+  }
+
   // Buscar palpite existente
   const { data: existingPick } = await supabase
     .from('picks')

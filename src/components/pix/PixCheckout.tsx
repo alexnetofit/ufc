@@ -216,6 +216,9 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
     );
   }
 
+  // Verificar se o sistema de pagamento não está configurado
+  const isPaymentSystemDisabled = error?.includes('pagamento não configurado');
+
   // Estado: Idle - Seleção de plano
   if (state === 'idle' || state === 'error') {
     return (
@@ -231,7 +234,14 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
             </p>
           </div>
 
-          {error && (
+          {isPaymentSystemDisabled && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
+              <AlertCircle className="text-yellow-500 flex-shrink-0" size={18} />
+              <span className="text-yellow-400 text-sm">Sistema de pagamento não configurado</span>
+            </div>
+          )}
+
+          {error && !isPaymentSystemDisabled && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
               <AlertCircle className="text-red-500 flex-shrink-0" size={18} />
               <span className="text-red-400 text-sm">{error}</span>
@@ -244,8 +254,10 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
               <button
                 key={plan}
                 onClick={() => setSelectedPlan(plan)}
+                disabled={isPaymentSystemDisabled}
                 className={cn(
                   'py-3 px-4 rounded-lg border-2 font-oswald text-lg transition-all',
+                  isPaymentSystemDisabled && 'opacity-50 cursor-not-allowed',
                   selectedPlan === plan
                     ? 'bg-ufc-gold/20 border-ufc-gold text-ufc-gold'
                     : 'bg-ufc-gray-700 border-ufc-gray-600 text-white hover:border-ufc-gray-500'
@@ -260,6 +272,7 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
             onClick={generatePix}
             className="w-full"
             size="lg"
+            disabled={isPaymentSystemDisabled}
           >
             <QrCode size={20} className="mr-2" />
             Gerar PIX
@@ -383,4 +396,6 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
 
   return null;
 }
+
+
 

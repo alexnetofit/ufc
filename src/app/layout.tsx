@@ -3,7 +3,7 @@ import { Toaster } from 'sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Fantasy MMA - UFC Predictions',
+  title: 'Sigma UFC - Palpites do UFC',
   description: 'Faça seus palpites nas lutas do UFC e ganhe pontos!',
 };
 
@@ -31,5 +31,7 @@ export default function RootLayout({
     </html>
   );
 }
+
+
 
 

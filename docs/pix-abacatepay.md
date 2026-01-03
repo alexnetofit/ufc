@@ -217,3 +217,5 @@ SELECT * FROM pix_payments_with_details;
 - `src/components/pix/PixCheckout.tsx` - Componente de checkout
 - `supabase/migrations/004_pix_payments.sql` - Migração do banco
 
+
+

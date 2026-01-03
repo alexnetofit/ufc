@@ -52,8 +52,11 @@ export function Navbar({ user, profile }: NavbarProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="font-bebas text-2xl text-white">FANTASY</span>
-            <span className="font-bebas text-2xl text-ufc-red">MMA</span>
+            <img 
+              src="/logo-sigma-ufc.png" 
+              alt="Sigma UFC" 
+              className="h-10 w-auto"
+            />
           </Link>
 
           {/* Desktop Nav */}

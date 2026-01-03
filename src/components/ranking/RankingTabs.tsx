@@ -48,3 +48,5 @@ export function RankingTabs({ globalRankingContent, monthlyRankingContent }: Ran
   );
 }
 
+
+

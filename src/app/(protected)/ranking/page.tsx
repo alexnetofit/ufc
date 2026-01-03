@@ -22,7 +22,7 @@ export default async function RankingPage() {
           RANKING
         </h1>
         <p className="text-ufc-gray-400 mt-1">
-          Os melhores palpiteiros do Fantasy MMA
+          Os melhores palpiteiros do Sigma UFC
         </p>
       </div>
 

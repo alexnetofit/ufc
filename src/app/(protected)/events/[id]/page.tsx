@@ -6,15 +6,23 @@ import { FightCard } from '@/components/fights/FightCard';
 import { Badge } from '@/components/ui';
 import { PixCheckout } from '@/components/pix';
 import { formatDate, formatRelative } from '@/lib/utils/date';
-import { ArrowLeft, Calendar, MapPin, Swords, Lock, Unlock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Swords, Lock, Unlock, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Fight, Pick } from '@/types';
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }
 
-export default async function EventPage({ params }: EventPageProps) {
+const ERROR_MESSAGES: Record<string, string> = {
+  payment_required: 'Você precisa pagar para participar antes de fazer palpites.',
+  picks_closed: 'Os palpites para esta luta já foram encerrados.',
+  event_not_open: 'Este evento ainda não está aberto para palpites.',
+};
+
+export default async function EventPage({ params, searchParams }: EventPageProps) {
   const { id } = await params;
+  const { error: errorParam } = await searchParams;
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -68,6 +76,21 @@ export default async function EventPage({ params }: EventPageProps) {
         <ArrowLeft size={20} />
         <span>Voltar para eventos</span>
       </Link>
+
+      {/* Error Message */}
+      {errorParam && ERROR_MESSAGES[errorParam] && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="text-red-500" size={20} />
+          </div>
+          <div>
+            <h3 className="font-oswald text-lg text-white">Atenção</h3>
+            <p className="text-red-400 text-sm">
+              {ERROR_MESSAGES[errorParam]}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Event Header */}
       <div className="relative overflow-hidden rounded-2xl bg-ufc-gradient p-8">
@@ -175,6 +198,7 @@ export default async function EventPage({ params }: EventPageProps) {
                 fight={fight} 
                 userPick={picksMap.get(fight.id)}
                 isEventOpen={isEventOpen}
+                hasPaidEntry={hasPaidEntry}
               />
             ))}
           </div>
@@ -195,6 +219,7 @@ export default async function EventPage({ params }: EventPageProps) {
                 fight={fight} 
                 userPick={picksMap.get(fight.id)}
                 isEventOpen={isEventOpen}
+                hasPaidEntry={hasPaidEntry}
               />
             ))}
           </div>
@@ -215,6 +240,7 @@ export default async function EventPage({ params }: EventPageProps) {
                 fight={fight} 
                 userPick={picksMap.get(fight.id)}
                 isEventOpen={isEventOpen}
+                hasPaidEntry={hasPaidEntry}
               />
             ))}
           </div>

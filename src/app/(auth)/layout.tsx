@@ -19,13 +19,12 @@ export default function AuthLayout({
       />
 
       {/* Logo */}
-      <Link href="/" className="relative z-10 mb-8 text-center">
-        <h1 className="font-bebas text-5xl text-white tracking-wider">
-          FANTASY
-        </h1>
-        <h2 className="font-bebas text-3xl text-ufc-red -mt-2">
-          MMA
-        </h2>
+      <Link href="/" className="relative z-10 mb-8">
+        <img 
+          src="/logo-sigma-ufc.png" 
+          alt="Sigma UFC" 
+          className="h-20 w-auto mx-auto"
+        />
       </Link>
 
       {/* Auth Card */}
@@ -37,10 +36,12 @@ export default function AuthLayout({
 
       {/* Footer */}
       <p className="relative z-10 mt-8 text-ufc-gray-500 text-sm">
-        © 2025 Fantasy MMA
+        © 2025 Sigma UFC
       </p>
     </div>
   );
 }
+
+
 
 

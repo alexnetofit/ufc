@@ -28,7 +28,7 @@ export default async function DashboardPage() {
           DASHBOARD
         </h1>
         <p className="text-ufc-gray-400 mt-1">
-          Bem-vindo ao Fantasy MMA! Faça seus palpites e suba no ranking.
+          Bem-vindo ao Sigma UFC! Faça seus palpites e suba no ranking.
         </p>
       </div>
 
