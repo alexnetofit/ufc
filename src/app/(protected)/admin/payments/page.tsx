@@ -36,18 +36,22 @@ async function getPixPayments(): Promise<PixPaymentWithDetails[]> {
 
   if (!data) return [];
 
-  return data.map(payment => ({
-    id: payment.id,
-    user_id: payment.user_id,
-    event_id: payment.event_id,
-    amount: payment.amount,
-    status: payment.status,
-    pix_id: payment.pix_id,
-    created_at: payment.created_at,
-    paid_at: payment.paid_at,
-    nickname: (payment.profiles as { nickname: string })?.nickname || 'Usuário',
-    event_name: (payment.events as { name: string })?.name || 'Evento',
-  }));
+  return data.map((payment) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const paymentData = payment as any;
+    return {
+      id: paymentData.id,
+      user_id: paymentData.user_id,
+      event_id: paymentData.event_id,
+      amount: paymentData.amount,
+      status: paymentData.status,
+      pix_id: paymentData.pix_id,
+      created_at: paymentData.created_at,
+      paid_at: paymentData.paid_at,
+      nickname: paymentData.profiles?.nickname || 'Usuário',
+      event_name: paymentData.events?.name || 'Evento',
+    };
+  });
 }
 
 export default async function AdminPaymentsPage() {
