@@ -89,12 +89,16 @@ async function getUserDetails(userId: string) {
   // Filtrar entradas manuais (amount = 0 e sem pix_payment_id)
   const manualEntries = (userEntries || [])
     .filter(entry => entry.amount === 0 && !entry.pix_payment_id)
-    .map(entry => ({
-      id: entry.id,
-      event_id: entry.event_id,
-      event_name: (entry.events as { name: string })?.name || 'Evento',
-      created_at: entry.created_at,
-    }));
+    .map(entry => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const entryData = entry as any;
+      return {
+        id: entryData.id,
+        event_id: entryData.event_id,
+        event_name: entryData.events?.name || 'Evento',
+        created_at: entryData.created_at,
+      };
+    });
 
   // Buscar eventos disponíveis (que ainda não aconteceram)
   const { data: allEvents } = await supabase
