@@ -76,7 +76,7 @@ export default async function AdminPaymentsPage() {
 
   const pendingPayments = payments.filter(p => p.status === 'PENDING');
   const confirmedPayments = payments.filter(p => p.status === 'PAID');
-  const totalRevenue = confirmedPayments.reduce((acc, p) => acc + Number(p.amount), 0);
+  const totalRevenue = confirmedPayments.reduce((acc, p) => acc + Number(p.amount) / 100, 0);
 
   return (
     <div>

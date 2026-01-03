@@ -115,7 +115,7 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
                 </td>
                 <td className="px-4 py-4 text-center">
                   <span className="text-white font-medium">
-                    R$ {Number(payment.amount).toFixed(2)}
+                    R$ {(Number(payment.amount) / 100).toFixed(2)}
                   </span>
                 </td>
                 <td className="px-4 py-4 text-center">
