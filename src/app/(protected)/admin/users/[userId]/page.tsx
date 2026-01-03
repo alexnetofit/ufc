@@ -135,7 +135,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
 
   const totalPaid = payments
     .filter(p => p.status === 'PAID')
-    .reduce((acc, p) => acc + Number(p.amount), 0);
+    .reduce((acc, p) => acc + Number(p.amount) / 100, 0);
 
   const accuracy = globalRanking?.picks_count > 0
     ? Math.round((globalRanking.correct_picks / globalRanking.picks_count) * 100)
@@ -359,7 +359,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                 >
                   <div>
                     <p className="font-medium text-white">
-                      R$ {Number(payment.amount).toFixed(2)}
+                      R$ {(Number(payment.amount) / 100).toFixed(2)}
                     </p>
                     <p className="text-ufc-gray-400 text-sm">
                       {(payment.events as { name: string })?.name || 'Evento'}

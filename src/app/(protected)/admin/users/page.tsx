@@ -29,7 +29,7 @@ async function getUsers(): Promise<UserSummary[]> {
   return profiles.map(profile => {
     const ranking = rankings?.find(r => r.user_id === profile.id);
     const userPayments = payments?.filter(p => p.user_id === profile.id) || [];
-    const totalPaid = userPayments.reduce((acc, p) => acc + Number(p.amount), 0);
+    const totalPaid = userPayments.reduce((acc, p) => acc + Number(p.amount) / 100, 0);
     
     return {
       user_id: profile.id,

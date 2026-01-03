@@ -37,7 +37,7 @@ async function getStats() {
     .select('amount')
     .eq('status', 'PAID');
 
-  const totalRevenue = paymentsData?.reduce((acc, p) => acc + Number(p.amount), 0) || 0;
+  const totalRevenue = paymentsData?.reduce((acc, p) => acc + Number(p.amount) / 100, 0) || 0;
 
   return {
     usersCount: usersCount || 0,
