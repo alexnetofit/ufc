@@ -19,11 +19,11 @@ async function getUsers(): Promise<UserSummary[]> {
     .from('global_ranking')
     .select('*');
 
-  // Buscar pagamentos confirmados
+  // Buscar pagamentos PIX confirmados
   const { data: payments } = await supabase
-    .from('payments')
+    .from('pix_payments')
     .select('user_id, amount')
-    .eq('status', 'confirmed');
+    .eq('status', 'PAID');
 
   // Combinar dados
   return profiles.map(profile => {

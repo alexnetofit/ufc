@@ -1,55 +1,53 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { Check, X, Search, Filter } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { Input } from '@/components/ui';
-import { PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from '@/types';
-import type { PaymentWithProfile, PaymentStatus } from '@/types';
 
-interface PaymentsTableProps {
-  payments: PaymentWithProfile[];
+type PixPaymentStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+
+interface PixPaymentWithDetails {
+  id: string;
+  user_id: string;
+  event_id: string;
+  amount: number;
+  status: PixPaymentStatus;
+  pix_id: string;
+  created_at: string;
+  paid_at: string | null;
+  nickname: string;
+  event_name: string;
 }
 
-const statusColors: Record<PaymentStatus, string> = {
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  confirmed: 'bg-green-500/20 text-green-400',
-  cancelled: 'bg-red-500/20 text-red-400',
-  refunded: 'bg-purple-500/20 text-purple-400',
+interface PaymentsTableProps {
+  payments: PixPaymentWithDetails[];
+}
+
+const PIX_STATUS_LABELS: Record<PixPaymentStatus, string> = {
+  PENDING: 'Pendente',
+  PAID: 'Pago',
+  EXPIRED: 'Expirado',
+  CANCELLED: 'Cancelado',
+};
+
+const statusColors: Record<PixPaymentStatus, string> = {
+  PENDING: 'bg-yellow-500/20 text-yellow-400',
+  PAID: 'bg-green-500/20 text-green-400',
+  EXPIRED: 'bg-gray-500/20 text-gray-400',
+  CANCELLED: 'bg-red-500/20 text-red-400',
 };
 
 export function PaymentsTable({ payments }: PaymentsTableProps) {
-  const router = useRouter();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
-  const [loading, setLoading] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<PixPaymentStatus | 'all'>('all');
 
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.nickname.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = 
+      payment.nickname.toLowerCase().includes(search.toLowerCase()) ||
+      payment.event_name.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
-  const updateStatus = async (paymentId: string, newStatus: PaymentStatus) => {
-    setLoading(paymentId);
-    try {
-      const response = await fetch('/api/admin/payments/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentId, status: newStatus }),
-      });
-
-      if (!response.ok) throw new Error('Erro ao atualizar');
-
-      toast.success(`Pagamento ${PAYMENT_STATUS_LABELS[newStatus].toLowerCase()}`);
-      router.refresh();
-    } catch (error) {
-      toast.error('Erro ao atualizar pagamento');
-    } finally {
-      setLoading(null);
-    }
-  };
 
   return (
     <div>
@@ -59,7 +57,7 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ufc-gray-400" size={18} />
           <Input
             type="text"
-            placeholder="Buscar por usuário..."
+            placeholder="Buscar por usuário ou evento..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -69,14 +67,14 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
           <Filter size={18} className="text-ufc-gray-400" />
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | 'all')}
+            onChange={(e) => setStatusFilter(e.target.value as PixPaymentStatus | 'all')}
             className="bg-ufc-gray-800 text-white rounded-lg px-3 py-2 border border-ufc-gray-600 focus:border-ufc-red focus:outline-none"
           >
             <option value="all">Todos</option>
-            <option value="pending">Pendentes</option>
-            <option value="confirmed">Confirmados</option>
-            <option value="cancelled">Cancelados</option>
-            <option value="refunded">Reembolsados</option>
+            <option value="PENDING">Pendentes</option>
+            <option value="PAID">Pagos</option>
+            <option value="EXPIRED">Expirados</option>
+            <option value="CANCELLED">Cancelados</option>
           </select>
         </div>
       </div>
@@ -89,23 +87,20 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
               <th className="px-4 py-3 text-left text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
                 Usuário
               </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
+                Evento
+              </th>
               <th className="px-4 py-3 text-center text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
                 Valor
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
-                Método
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
-                Referência
               </th>
               <th className="px-4 py-3 text-center text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-4 py-3 text-center text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
-                Data
+                Criado em
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
-                Ações
+              <th className="px-4 py-3 text-center text-xs font-medium text-ufc-gray-400 uppercase tracking-wider">
+                Pago em
               </th>
             </tr>
           </thead>
@@ -114,11 +109,9 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
               <tr key={payment.id} className="hover:bg-ufc-gray-800/50">
                 <td className="px-4 py-4">
                   <p className="text-white font-medium">{payment.nickname}</p>
-                  {payment.notes && (
-                    <p className="text-ufc-gray-400 text-xs truncate max-w-[200px]">
-                      {payment.notes}
-                    </p>
-                  )}
+                </td>
+                <td className="px-4 py-4">
+                  <p className="text-ufc-gray-300">{payment.event_name}</p>
                 </td>
                 <td className="px-4 py-4 text-center">
                   <span className="text-white font-medium">
@@ -126,50 +119,34 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
                   </span>
                 </td>
                 <td className="px-4 py-4 text-center">
-                  <span className="text-ufc-gray-300">
-                    {PAYMENT_METHOD_LABELS[payment.payment_method]}
-                  </span>
-                </td>
-                <td className="px-4 py-4 text-center">
-                  <span className="text-ufc-gray-300">
-                    {payment.reference_month || '-'}
-                  </span>
-                </td>
-                <td className="px-4 py-4 text-center">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusColors[payment.status]}`}>
-                    {PAYMENT_STATUS_LABELS[payment.status]}
+                    {PIX_STATUS_LABELS[payment.status]}
                   </span>
                 </td>
                 <td className="px-4 py-4 text-center">
                   <span className="text-ufc-gray-400 text-sm">
-                    {new Date(payment.created_at).toLocaleDateString('pt-BR')}
+                    {new Date(payment.created_at).toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-right">
-                  {payment.status === 'pending' && (
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => updateStatus(payment.id, 'confirmed')}
-                        disabled={loading === payment.id}
-                        className="p-2 rounded-lg text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                        title="Confirmar"
-                      >
-                        <Check size={18} />
-                      </button>
-                      <button
-                        onClick={() => updateStatus(payment.id, 'cancelled')}
-                        disabled={loading === payment.id}
-                        className="p-2 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                        title="Cancelar"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  )}
-                  {payment.status === 'confirmed' && payment.confirmed_by_nickname && (
-                    <span className="text-xs text-ufc-gray-500">
-                      por {payment.confirmed_by_nickname}
+                <td className="px-4 py-4 text-center">
+                  {payment.paid_at ? (
+                    <span className="text-green-400 text-sm">
+                      {new Date(payment.paid_at).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </span>
+                  ) : (
+                    <span className="text-ufc-gray-500 text-sm">-</span>
                   )}
                 </td>
               </tr>
@@ -186,7 +163,3 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
     </div>
   );
 }
-
-
-
-

@@ -43,10 +43,13 @@ async function getUserDetails(userId: string) {
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  // Buscar pagamentos
+  // Buscar pagamentos PIX
   const { data: payments } = await supabase
-    .from('payments')
-    .select('*')
+    .from('pix_payments')
+    .select(`
+      *,
+      events(name)
+    `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -71,10 +74,27 @@ async function getUserDetails(userId: string) {
   // Buscar entradas já confirmadas do usuário
   const { data: userEntries } = await supabase
     .from('event_entries')
-    .select('event_id')
+    .select(`
+      id,
+      event_id,
+      amount,
+      pix_payment_id,
+      created_at,
+      events(name)
+    `)
     .eq('user_id', userId);
 
   const userEventIds = (userEntries || []).map(e => e.event_id);
+
+  // Filtrar entradas manuais (amount = 0 e sem pix_payment_id)
+  const manualEntries = (userEntries || [])
+    .filter(entry => entry.amount === 0 && !entry.pix_payment_id)
+    .map(entry => ({
+      id: entry.id,
+      event_id: entry.event_id,
+      event_name: (entry.events as { name: string })?.name || 'Evento',
+      created_at: entry.created_at,
+    }));
 
   // Buscar eventos disponíveis (que ainda não aconteceram)
   const { data: allEvents } = await supabase
@@ -95,6 +115,7 @@ async function getUserDetails(userId: string) {
     payments: payments || [],
     picks: picks || [],
     availableEvents,
+    manualEntries,
   };
 }
 
@@ -106,10 +127,10 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
     notFound();
   }
 
-  const { profile, globalRanking, eventRankings, payments, picks, availableEvents } = data;
+  const { profile, globalRanking, eventRankings, payments, picks, availableEvents, manualEntries } = data;
 
   const totalPaid = payments
-    .filter(p => p.status === 'confirmed')
+    .filter(p => p.status === 'PAID')
     .reduce((acc, p) => acc + Number(p.amount), 0);
 
   const accuracy = globalRanking?.picks_count > 0
@@ -193,6 +214,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
             userId={profile.id}
             userName={profile.nickname}
             availableEvents={availableEvents}
+            manualEntries={manualEntries}
           />
         </CardContent>
       </Card>
@@ -315,13 +337,13 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      {/* Pagamentos */}
+      {/* Pagamentos PIX */}
       {payments.length > 0 && (
         <Card>
           <CardHeader>
             <h2 className="font-oswald text-xl text-white flex items-center gap-2">
               <CreditCard size={20} className="text-green-500" />
-              Histórico de Pagamentos
+              Histórico de Pagamentos PIX
             </h2>
           </CardHeader>
           <CardContent>
@@ -335,20 +357,24 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
                     <p className="font-medium text-white">
                       R$ {Number(payment.amount).toFixed(2)}
                     </p>
-                    <p className="text-ufc-gray-500 text-sm">
+                    <p className="text-ufc-gray-400 text-sm">
+                      {(payment.events as { name: string })?.name || 'Evento'}
+                    </p>
+                    <p className="text-ufc-gray-500 text-xs">
                       {format(new Date(payment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </p>
                   </div>
                   <Badge 
                     variant={
-                      payment.status === 'confirmed' ? 'success' :
-                      payment.status === 'pending' ? 'warning' :
-                      payment.status === 'cancelled' ? 'error' : 'default'
+                      payment.status === 'PAID' ? 'success' :
+                      payment.status === 'PENDING' ? 'warning' :
+                      payment.status === 'CANCELLED' ? 'error' : 'default'
                     }
                   >
-                    {payment.status === 'confirmed' ? 'Confirmado' :
-                     payment.status === 'pending' ? 'Pendente' :
-                     payment.status === 'cancelled' ? 'Cancelado' : payment.status}
+                    {payment.status === 'PAID' ? 'Pago' :
+                     payment.status === 'PENDING' ? 'Pendente' :
+                     payment.status === 'EXPIRED' ? 'Expirado' :
+                     payment.status === 'CANCELLED' ? 'Cancelado' : payment.status}
                   </Badge>
                 </div>
               ))}

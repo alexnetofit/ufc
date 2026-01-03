@@ -25,17 +25,17 @@ async function getStats() {
     .from('picks')
     .select('*', { count: 'exact', head: true });
 
-  // Pagamentos pendentes
+  // Pagamentos pendentes (PIX)
   const { count: pendingPayments } = await supabase
-    .from('payments')
+    .from('pix_payments')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending');
+    .eq('status', 'PENDING');
 
-  // Total arrecadado
+  // Total arrecadado (PIX confirmados)
   const { data: paymentsData } = await supabase
-    .from('payments')
+    .from('pix_payments')
     .select('amount')
-    .eq('status', 'confirmed');
+    .eq('status', 'PAID');
 
   const totalRevenue = paymentsData?.reduce((acc, p) => acc + Number(p.amount), 0) || 0;
 

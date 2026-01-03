@@ -383,4 +383,50 @@ ORDER BY p.created_at DESC;
 
 
 
+-- ======================================================
+-- MIGRATION 006: Remover tabela payments (legado)
+-- A tabela 'payments' era usada para pagamentos manuais.
+-- Agora usamos 'pix_payments' para tudo via PIX.
+-- ======================================================
+
+-- Remover view que depende da tabela
+DROP VIEW IF EXISTS payments_with_profiles CASCADE;
+
+-- Atualizar view users_summary para usar pix_payments
+CREATE OR REPLACE VIEW users_summary AS
+SELECT 
+  p.id as user_id,
+  p.nickname,
+  p.avatar_url,
+  p.is_admin,
+  p.created_at,
+  COALESCE(gr.total_points, 0) as total_points,
+  COALESCE(gr.picks_count, 0) as total_picks,
+  COALESCE(gr.correct_picks, 0) as correct_picks,
+  COALESCE(gr.accuracy, 0) as accuracy,
+  (SELECT COUNT(*) FROM pix_payments pp WHERE pp.user_id = p.id AND pp.status = 'PAID') as confirmed_payments,
+  (SELECT COALESCE(SUM(amount), 0) FROM pix_payments pp WHERE pp.user_id = p.id AND pp.status = 'PAID') as total_paid
+FROM profiles p
+LEFT JOIN global_ranking gr ON gr.user_id = p.id
+ORDER BY p.created_at DESC;
+
+-- Remover políticas RLS da tabela payments
+DROP POLICY IF EXISTS "Users can view own payments" ON payments;
+DROP POLICY IF EXISTS "Admins can view all payments" ON payments;
+DROP POLICY IF EXISTS "Admins can insert payments" ON payments;
+DROP POLICY IF EXISTS "Admins can update payments" ON payments;
+DROP POLICY IF EXISTS "Admins can delete payments" ON payments;
+
+-- Remover trigger
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
+
+-- Remover tabela payments
+DROP TABLE IF EXISTS payments CASCADE;
+
+-- ======================================================
+-- FIM DA MIGRATION 006
+-- ======================================================
+
+
+
 
