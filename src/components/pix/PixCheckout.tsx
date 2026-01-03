@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { QrCode, Copy, Check, Clock, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { QrCode, Copy, Check, Clock, AlertCircle, CheckCircle2, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button, Card, CardContent } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
 import type { PixPayment, PaymentPlan, PixPaymentStatus } from '@/types';
@@ -22,6 +22,7 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isCancelling, setIsCancelling] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Verificar se já existe pagamento pendente ou entrada
@@ -165,6 +166,43 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Erro ao copiar:', err);
+    }
+  };
+
+  // Trocar valor do PIX (cancelar atual e voltar para seleção)
+  const handleChangeAmount = async () => {
+    if (!payment || isCancelling) return;
+
+    setIsCancelling(true);
+
+    try {
+      // Parar polling
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+
+      // Cancelar PIX atual
+      const response = await fetch('/api/pix/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId: payment.id }),
+      });
+      const data = await response.json();
+
+      if (!data.success) {
+        console.error('Erro ao cancelar PIX:', data.error);
+      }
+
+      // Voltar para seleção de valor (mesmo se der erro, o PIX vai expirar)
+      setPayment(null);
+      setState('idle');
+    } catch (err) {
+      console.error('Erro ao cancelar PIX:', err);
+      // Voltar para seleção mesmo assim
+      setPayment(null);
+      setState('idle');
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -352,10 +390,30 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
           </div>
 
           {/* Status */}
-          <div className="flex items-center justify-center gap-2 text-ufc-gray-400 text-sm">
+          <div className="flex items-center justify-center gap-2 text-ufc-gray-400 text-sm mb-4">
             <RefreshCw className="animate-spin" size={14} />
             <span>Aguardando pagamento...</span>
           </div>
+
+          {/* Botão Trocar Valor */}
+          <Button
+            variant="outline"
+            onClick={handleChangeAmount}
+            disabled={isCancelling}
+            className="w-full"
+          >
+            {isCancelling ? (
+              <>
+                <RefreshCw className="animate-spin mr-2" size={16} />
+                Cancelando...
+              </>
+            ) : (
+              <>
+                <ArrowLeft size={16} className="mr-2" />
+                Trocar Valor
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
     );
