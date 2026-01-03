@@ -27,37 +27,48 @@ interface PixPaymentWithDetails {
 async function getPixPayments(): Promise<PixPaymentWithDetails[]> {
   const supabase = getAdminClient();
   
-  const { data, error } = await supabase
+  // Buscar pagamentos
+  const { data: payments, error: paymentsError } = await supabase
     .from('pix_payments')
-    .select(`
-      *,
-      profiles(nickname),
-      events(name)
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Erro ao buscar pagamentos:', error);
+  if (paymentsError) {
+    console.error('Erro ao buscar pagamentos:', paymentsError);
+    return [];
   }
 
-  if (!data) return [];
+  if (!payments || payments.length === 0) return [];
 
-  return data.map((payment) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const paymentData = payment as any;
-    return {
-      id: paymentData.id,
-      user_id: paymentData.user_id,
-      event_id: paymentData.event_id,
-      amount: paymentData.amount,
-      status: paymentData.status,
-      pix_id: paymentData.pix_id,
-      created_at: paymentData.created_at,
-      paid_at: paymentData.paid_at,
-      nickname: paymentData.profiles?.nickname || 'Usuário',
-      event_name: paymentData.events?.name || 'Evento',
-    };
-  });
+  // Buscar profiles
+  const userIds = [...new Set(payments.map(p => p.user_id))];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, nickname')
+    .in('id', userIds);
+
+  // Buscar eventos
+  const eventIds = [...new Set(payments.map(p => p.event_id))];
+  const { data: events } = await supabase
+    .from('events')
+    .select('id, name')
+    .in('id', eventIds);
+
+  const profilesMap = new Map((profiles || []).map(p => [p.id, p.nickname]));
+  const eventsMap = new Map((events || []).map(e => [e.id, e.name]));
+
+  return payments.map((payment) => ({
+    id: payment.id,
+    user_id: payment.user_id,
+    event_id: payment.event_id,
+    amount: payment.amount,
+    status: payment.status,
+    pix_id: payment.pix_id,
+    created_at: payment.created_at,
+    paid_at: payment.paid_at,
+    nickname: profilesMap.get(payment.user_id) || 'Usuário',
+    event_name: eventsMap.get(payment.event_id) || 'Evento',
+  }));
 }
 
 export default async function AdminPaymentsPage() {
