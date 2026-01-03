@@ -18,21 +18,18 @@ interface PixPaymentWithDetails {
 async function getPixPayments(): Promise<PixPaymentWithDetails[]> {
   const supabase = await createClient();
   
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('pix_payments')
     .select(`
-      id,
-      user_id,
-      event_id,
-      amount,
-      status,
-      pix_id,
-      created_at,
-      paid_at,
-      profiles!pix_payments_user_id_fkey(nickname),
-      events!pix_payments_event_id_fkey(name)
+      *,
+      profiles(nickname),
+      events(name)
     `)
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar pagamentos:', error);
+  }
 
   if (!data) return [];
 
