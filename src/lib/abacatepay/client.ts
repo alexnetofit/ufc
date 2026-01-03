@@ -10,10 +10,17 @@ const ABACATEPAY_BASE_URL = process.env.ABACATEPAY_BASE_URL || 'https://api.abac
 // TYPES
 // ========================================
 
+export interface Customer {
+  name: string;
+  email: string;
+  taxId: string; // CPF (apenas números)
+}
+
 export interface CreatePixRequest {
   amount: number; // Valor em centavos
   expiresIn: number; // Tempo de expiração em segundos
   description: string;
+  customer?: Customer;
   metadata?: {
     userId?: string;
     eventId?: string;

@@ -118,12 +118,24 @@ export async function POST(
       });
     }
 
+    // Buscar profile do usuário para dados do cliente
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, cpf')
+      .eq('id', user.id)
+      .single();
+
     // Criar nova cobrança na AbacatePay
     const abacatePay = getAbacatePayClient();
     const pixResponse = await abacatePay.createPix({
       amount,
       expiresIn: PIX_EXPIRES_IN,
-      description: `Entrada ${event.name} - R$${plan}`,
+      description: 'Estratégias de Palpite UFC',
+      customer: profile?.full_name && profile?.cpf ? {
+        name: profile.full_name,
+        email: user.email || '',
+        taxId: profile.cpf,
+      } : undefined,
       metadata: {
         userId: user.id,
         eventId: eventId,

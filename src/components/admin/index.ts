@@ -3,6 +3,7 @@ export { PaymentsTable } from './PaymentsTable';
 export { AddPaymentButton } from './AddPaymentButton';
 export { EventsManager } from './EventsManager';
 export { FightEditor } from './FightEditor';
+export { ReleaseEntryForm } from './ReleaseEntryForm';
 
 
 

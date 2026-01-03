@@ -23,6 +23,8 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Verificar se já existe pagamento pendente ou entrada
@@ -206,6 +208,35 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
     }
   };
 
+  // Verificar se há pagamentos recentes confirmados
+  const handleVerifyRecent = async () => {
+    if (isVerifying) return;
+
+    setIsVerifying(true);
+    setVerifyMessage(null);
+
+    try {
+      const response = await fetch('/api/pix/verify-recent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId }),
+      });
+      const data = await response.json();
+
+      if (data.found) {
+        setState('paid');
+        onPaymentConfirmed?.();
+      } else {
+        setVerifyMessage(data.message || 'Nenhum pagamento encontrado');
+      }
+    } catch (err) {
+      console.error('Erro ao verificar pagamento:', err);
+      setVerifyMessage('Erro ao verificar. Tente novamente.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   // Formatar QR Code base64
   const getQrCodeSrc = () => {
     if (!payment?.br_code_base64) return null;
@@ -315,6 +346,22 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
             <QrCode size={20} className="mr-2" />
             Gerar PIX
           </Button>
+
+          {/* Link para verificar pagamento recente */}
+          {!isPaymentSystemDisabled && (
+            <div className="mt-4 text-center">
+              {verifyMessage && (
+                <p className="text-ufc-gray-400 text-xs mb-2">{verifyMessage}</p>
+              )}
+              <button
+                onClick={handleVerifyRecent}
+                disabled={isVerifying}
+                className="text-sm text-ufc-gray-400 hover:text-ufc-gold transition-colors underline"
+              >
+                {isVerifying ? 'Verificando...' : 'Já fiz um pagamento'}
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

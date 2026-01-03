@@ -4,9 +4,44 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Mail, Lock, User, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, CreditCard } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { getSupabaseClient } from '@/lib/supabase/client';
+
+// Função para formatar CPF
+function formatCPF(value: string): string {
+  const numbers = value.replace(/\D/g, '').slice(0, 11);
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+  if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+  return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
+}
+
+// Função para validar CPF
+function isValidCPF(cpf: string): boolean {
+  const numbers = cpf.replace(/\D/g, '');
+  if (numbers.length !== 11) return false;
+  if (/^(\d)\1+$/.test(numbers)) return false; // CPFs com todos dígitos iguais
+  
+  // Validação dos dígitos verificadores
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(numbers[i]) * (10 - i);
+  }
+  let digit1 = (sum * 10) % 11;
+  if (digit1 === 10) digit1 = 0;
+  if (digit1 !== parseInt(numbers[9])) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(numbers[i]) * (11 - i);
+  }
+  let digit2 = (sum * 10) % 11;
+  if (digit2 === 10) digit2 = 0;
+  if (digit2 !== parseInt(numbers[10])) return false;
+  
+  return true;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,17 +50,33 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nickname, setNickname] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [cpf, setCpf] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
     confirmPassword?: string;
     nickname?: string;
+    fullName?: string;
+    cpf?: string;
   }>({});
 
   const validate = () => {
     const newErrors: typeof errors = {};
     
+    if (!fullName) {
+      newErrors.fullName = 'Nome completo é obrigatório';
+    } else if (fullName.trim().split(' ').length < 2) {
+      newErrors.fullName = 'Digite seu nome completo (nome e sobrenome)';
+    }
+
+    if (!cpf) {
+      newErrors.cpf = 'CPF é obrigatório';
+    } else if (!isValidCPF(cpf)) {
+      newErrors.cpf = 'CPF inválido';
+    }
+
     if (!email) {
       newErrors.email = 'Email é obrigatório';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -81,6 +132,20 @@ export default function RegisterPage() {
         return;
       }
 
+      // Verificar se CPF já existe
+      const cpfNumbers = cpf.replace(/\D/g, '');
+      const { data: existingCpf } = await supabase
+        .from('profiles')
+        .select('cpf')
+        .eq('cpf', cpfNumbers)
+        .single();
+
+      if (existingCpf) {
+        setErrors({ cpf: 'Este CPF já está cadastrado' });
+        setIsLoading(false);
+        return;
+      }
+
       // Criar usuário
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -101,11 +166,16 @@ export default function RegisterPage() {
         return;
       }
 
-      // Atualizar nickname no profile (trigger cria com default)
+      // Atualizar profile com os dados (trigger cria com default)
       if (authData.user) {
+        const cpfNumbers = cpf.replace(/\D/g, '');
         await supabase
           .from('profiles')
-          .update({ nickname })
+          .update({ 
+            nickname,
+            full_name: fullName.trim(),
+            cpf: cpfNumbers,
+          })
           .eq('id', authData.user.id);
       }
 
@@ -129,6 +199,29 @@ export default function RegisterPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        <Input
+          label="Nome Completo"
+          type="text"
+          placeholder="Seu nome e sobrenome"
+          icon={<User size={20} />}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          error={errors.fullName}
+          disabled={isLoading}
+        />
+
+        <Input
+          label="CPF"
+          type="text"
+          placeholder="000.000.000-00"
+          icon={<CreditCard size={20} />}
+          value={cpf}
+          onChange={(e) => setCpf(formatCPF(e.target.value))}
+          error={errors.cpf}
+          disabled={isLoading}
+          maxLength={14}
+        />
+
         <Input
           label="Nickname"
           type="text"

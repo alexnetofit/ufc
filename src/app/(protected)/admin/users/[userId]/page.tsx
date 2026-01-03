@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardHeader, CardContent, Badge } from '@/components/ui';
-import { UserPicksHistory } from '@/components/admin/UserPicksHistory';
+import { UserPicksHistory, ReleaseEntryForm } from '@/components/admin';
 import { 
   ArrowLeft, User, Mail, Calendar, Trophy, Target, 
-  TrendingUp, Shield, CreditCard, Clock
+  TrendingUp, Shield, CreditCard, Clock, Unlock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -68,12 +68,33 @@ async function getUserDetails(userId: string) {
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
+  // Buscar entradas já confirmadas do usuário
+  const { data: userEntries } = await supabase
+    .from('event_entries')
+    .select('event_id')
+    .eq('user_id', userId);
+
+  const userEventIds = (userEntries || []).map(e => e.event_id);
+
+  // Buscar eventos disponíveis (que ainda não aconteceram)
+  const { data: allEvents } = await supabase
+    .from('events')
+    .select('id, name, scheduled_date')
+    .gte('scheduled_date', new Date().toISOString().split('T')[0])
+    .order('scheduled_date', { ascending: true });
+
+  // Filtrar eventos que o usuário ainda não tem entrada
+  const availableEvents = (allEvents || []).filter(
+    event => !userEventIds.includes(event.id)
+  );
+
   return {
     profile,
     globalRanking,
     eventRankings: eventRankings || [],
     payments: payments || [],
     picks: picks || [],
+    availableEvents,
   };
 }
 
@@ -85,7 +106,7 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
     notFound();
   }
 
-  const { profile, globalRanking, eventRankings, payments, picks } = data;
+  const { profile, globalRanking, eventRankings, payments, picks, availableEvents } = data;
 
   const totalPaid = payments
     .filter(p => p.status === 'confirmed')
@@ -156,6 +177,23 @@ export default async function AdminUserDetailsPage({ params }: PageProps) {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Liberar Palpites */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-oswald text-xl text-white flex items-center gap-2">
+            <Unlock size={20} className="text-ufc-gold" />
+            Liberar Palpites (Manual)
+          </h2>
+        </CardHeader>
+        <CardContent>
+          <ReleaseEntryForm 
+            userId={profile.id}
+            userName={profile.nickname}
+            availableEvents={availableEvents}
+          />
         </CardContent>
       </Card>
 

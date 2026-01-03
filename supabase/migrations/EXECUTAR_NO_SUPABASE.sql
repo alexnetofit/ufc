@@ -1,5 +1,5 @@
 -- =====================================================
--- FANTASY MMA - EXECUTE ESTE ARQUIVO INTEIRO NO SUPABASE
+-- SIGMA UFC - EXECUTE ESTE ARQUIVO INTEIRO NO SUPABASE
 -- Vá em SQL Editor > New Query > Cole tudo > Run
 -- =====================================================
 
@@ -17,11 +17,16 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   nickname TEXT UNIQUE NOT NULL,
+  full_name TEXT,
+  cpf TEXT,
   avatar_url TEXT,
   is_admin BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Índice único para CPF
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_cpf ON profiles(cpf) WHERE cpf IS NOT NULL;
 
 -- Trigger para criar profile automaticamente ao registrar
 CREATE OR REPLACE FUNCTION handle_new_user()
