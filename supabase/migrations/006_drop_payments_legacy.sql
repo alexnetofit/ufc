@@ -25,3 +25,6 @@ DROP TABLE IF EXISTS payments CASCADE;
 -- FIM DA MIGRATION
 -- ======================================================
 
+
+
+

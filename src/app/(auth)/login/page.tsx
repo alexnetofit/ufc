@@ -92,16 +92,26 @@ export default function LoginPage() {
           disabled={isLoading}
         />
 
-        <Input
-          label="Senha"
-          type="password"
-          placeholder="••••••••"
-          icon={<Lock size={20} />}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={errors.password}
-          disabled={isLoading}
-        />
+        <div>
+          <Input
+            label="Senha"
+            type="password"
+            placeholder="••••••••"
+            icon={<Lock size={20} />}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={errors.password}
+            disabled={isLoading}
+          />
+          <div className="mt-2 text-right">
+            <Link 
+              href="/forgot-password" 
+              className="text-sm text-ufc-gray-400 hover:text-ufc-gold transition-colors"
+            >
+              Esqueci minha senha
+            </Link>
+          </div>
+        </div>
 
         <Button
           type="submit"
@@ -128,6 +138,9 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
+
 
 
 

@@ -2,3 +2,6 @@ export { PixCheckout } from './PixCheckout';
 
 
 
+
+
+

@@ -14,3 +14,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_cpf ON profiles(cpf) WHERE cpf IS
 COMMENT ON COLUMN profiles.full_name IS 'Nome completo do usuário para pagamentos PIX';
 COMMENT ON COLUMN profiles.cpf IS 'CPF do usuário para pagamentos PIX (formato: 000.000.000-00 ou apenas números)';
 
+
+
+
