@@ -153,4 +153,3 @@ export function shouldFetchResults(eventDate: string | Date): boolean {
   
   return isAfter(now, d) && isBefore(now, eventEnd);
 }
-

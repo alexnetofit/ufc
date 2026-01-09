@@ -33,6 +33,11 @@ const DECISIONS: { value: PredictedDecision; label: string }[] = [
   { value: 'Maioria', label: 'MAIORIA' },
 ];
 
+// Construir URL do proxy de imagem baseado no fighter_id
+function getFighterImageUrl(fighterId: number): string {
+  return `/api/fighter-image/${fighterId}`;
+}
+
 export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState<WizardStep>('winner');
@@ -178,11 +183,12 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
       </div>
 
       {/* Fighters Display */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between">
+      <Card className="p-3 sm:p-6">
+        <div className="flex items-center justify-between gap-1 sm:gap-4">
+          {/* Fighter 1 */}
           <div 
             className={cn(
-              'flex flex-col items-center flex-1 p-4 rounded-xl transition-all cursor-pointer',
+              'flex flex-col items-center flex-1 p-2 sm:p-4 rounded-xl transition-all cursor-pointer min-w-0',
               winner === 1 && 'bg-ufc-gold/20 ring-2 ring-ufc-gold',
               step === 'winner' && 'hover:bg-ufc-gray-700'
             )}
@@ -191,31 +197,34 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
             <FighterImage
               fighterId={fight.fighter1_id}
               name={fight.fighter1_name}
-              size="xl"
+              imageUrl={getFighterImageUrl(fight.fighter1_id)}
+              size="lg"
               className={cn(winner === 1 && 'ring-4 ring-ufc-gold')}
             />
-            <h3 className="font-oswald text-xl text-white mt-3 text-center">
+            <h3 className="font-oswald text-base sm:text-xl text-white mt-2 sm:mt-3 text-center truncate w-full">
               {fight.fighter1_name.split(' ').slice(-1)[0].toUpperCase()}
             </h3>
-            <p className="text-ufc-gray-400 text-sm mt-1 text-center">
+            <p className="text-ufc-gray-400 text-xs sm:text-sm mt-1 text-center truncate w-full">
               {fight.fighter1_name}
             </p>
             {winner === 1 && (
-              <Badge variant="gold" className="mt-2">
+              <Badge variant="gold" className="mt-2 text-xs">
                 SELECIONADO
               </Badge>
             )}
           </div>
 
-          <div className="px-4">
-            <div className="vs-badge w-16 h-16 rounded-full flex items-center justify-center">
-              <span className="font-bebas text-2xl text-white">VS</span>
+          {/* VS Badge */}
+          <div className="px-1 sm:px-4 flex-shrink-0">
+            <div className="vs-badge w-10 h-10 sm:w-16 sm:h-16 rounded-full flex items-center justify-center">
+              <span className="font-bebas text-lg sm:text-2xl text-white">VS</span>
             </div>
           </div>
 
+          {/* Fighter 2 */}
           <div 
             className={cn(
-              'flex flex-col items-center flex-1 p-4 rounded-xl transition-all cursor-pointer',
+              'flex flex-col items-center flex-1 p-2 sm:p-4 rounded-xl transition-all cursor-pointer min-w-0',
               winner === 2 && 'bg-ufc-gold/20 ring-2 ring-ufc-gold',
               step === 'winner' && 'hover:bg-ufc-gray-700'
             )}
@@ -224,17 +233,18 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
             <FighterImage
               fighterId={fight.fighter2_id}
               name={fight.fighter2_name}
-              size="xl"
+              imageUrl={getFighterImageUrl(fight.fighter2_id)}
+              size="lg"
               className={cn(winner === 2 && 'ring-4 ring-ufc-gold')}
             />
-            <h3 className="font-oswald text-xl text-white mt-3 text-center">
+            <h3 className="font-oswald text-base sm:text-xl text-white mt-2 sm:mt-3 text-center truncate w-full">
               {fight.fighter2_name.split(' ').slice(-1)[0].toUpperCase()}
             </h3>
-            <p className="text-ufc-gray-400 text-sm mt-1 text-center">
+            <p className="text-ufc-gray-400 text-xs sm:text-sm mt-1 text-center truncate w-full">
               {fight.fighter2_name}
             </p>
             {winner === 2 && (
-              <Badge variant="gold" className="mt-2">
+              <Badge variant="gold" className="mt-2 text-xs">
                 SELECIONADO
               </Badge>
             )}
@@ -243,13 +253,13 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
       </Card>
 
       {/* Step Content */}
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         {step === 'winner' && (
           <div className="text-center">
-            <h2 className="font-oswald text-2xl text-white mb-4">
+            <h2 className="font-oswald text-xl sm:text-2xl text-white mb-2 sm:mb-4">
               PASSO 1: ESCOLHA O VENCEDOR
             </h2>
-            <p className="text-ufc-gray-400">
+            <p className="text-ufc-gray-400 text-sm sm:text-base">
               Clique no lutador que você acha que vai vencer esta luta
             </p>
           </div>
@@ -257,38 +267,38 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
 
         {step === 'method' && (
           <div>
-            <h2 className="font-oswald text-2xl text-white mb-4 text-center">
+            <h2 className="font-oswald text-xl sm:text-2xl text-white mb-2 sm:mb-4 text-center">
               PASSO 2: COMO VAI GANHAR? (opcional)
             </h2>
-            <p className="text-ufc-gray-400 text-center mb-6">
+            <p className="text-ufc-gray-400 text-center mb-4 sm:mb-6 text-sm sm:text-base">
               Escolha o método de vitória para ganhar +20 pontos
             </p>
 
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
               {METHODS.map((m) => (
                 <button
                   key={m.value}
                   onClick={() => handleSelectMethod(m.value)}
                   className={cn(
-                    'p-4 rounded-xl border-2 transition-all',
+                    'p-2 sm:p-4 rounded-xl border-2 transition-all',
                     method === m.value
                       ? 'border-ufc-gold bg-ufc-gold/20'
                       : 'border-ufc-gray-700 hover:border-ufc-gray-500'
                   )}
                 >
-                  <h3 className="font-oswald text-lg text-white">{m.label}</h3>
-                  <p className="text-ufc-gray-400 text-xs mt-1">{m.description}</p>
+                  <h3 className="font-oswald text-sm sm:text-lg text-white">{m.label}</h3>
+                  <p className="text-ufc-gray-400 text-[10px] sm:text-xs mt-1 hidden sm:block">{m.description}</p>
                 </button>
               ))}
             </div>
 
-            <div className="flex justify-between">
-              <Button variant="ghost" onClick={goBack}>
-                <ArrowLeft size={18} className="mr-2" />
+            <div className="flex justify-between gap-2">
+              <Button variant="ghost" onClick={goBack} size="sm" className="text-xs sm:text-sm">
+                <ArrowLeft size={16} className="mr-1 sm:mr-2" />
                 Voltar
               </Button>
-              <Button variant="outline" onClick={() => handleSelectMethod(null)}>
-                Pular (só vencedor)
+              <Button variant="outline" onClick={() => handleSelectMethod(null)} size="sm" className="text-xs sm:text-sm">
+                Pular
               </Button>
             </div>
           </div>
@@ -296,10 +306,10 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
 
         {step === 'detail' && (
           <div>
-            <h2 className="font-oswald text-2xl text-white mb-4 text-center">
+            <h2 className="font-oswald text-xl sm:text-2xl text-white mb-2 sm:mb-4 text-center">
               PASSO 3: DETALHE FINAL (opcional)
             </h2>
-            <p className="text-ufc-gray-400 text-center mb-6">
+            <p className="text-ufc-gray-400 text-center mb-4 sm:mb-6 text-sm sm:text-base">
               {method === 'DEC' 
                 ? 'Escolha o tipo de decisão para ganhar +30 pontos'
                 : 'Escolha o round para ganhar +30 pontos'
@@ -307,52 +317,54 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
             </p>
 
             {method === 'DEC' ? (
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
                 {DECISIONS.map((d) => (
                   <button
                     key={d.value}
                     onClick={() => handleSelectDetail(d.value)}
                     className={cn(
-                      'p-4 rounded-xl border-2 transition-all',
+                      'p-2 sm:p-4 rounded-xl border-2 transition-all',
                       decision === d.value
                         ? 'border-ufc-gold bg-ufc-gold/20'
                         : 'border-ufc-gray-700 hover:border-ufc-gray-500'
                     )}
                   >
-                    <h3 className="font-oswald text-lg text-white">{d.label}</h3>
+                    <h3 className="font-oswald text-sm sm:text-lg text-white">{d.label}</h3>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-5 gap-3 mb-6">
+              <div className="grid grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6">
                 {ROUNDS.map((r) => (
                   <button
                     key={r}
                     onClick={() => handleSelectDetail(r)}
                     className={cn(
-                      'p-4 rounded-xl border-2 transition-all',
+                      'p-2 sm:p-4 rounded-xl border-2 transition-all',
                       round === r
                         ? 'border-ufc-gold bg-ufc-gold/20'
                         : 'border-ufc-gray-700 hover:border-ufc-gray-500'
                     )}
                   >
-                    <h3 className="font-bebas text-2xl text-white">R{r}</h3>
+                    <h3 className="font-bebas text-xl sm:text-2xl text-white">R{r}</h3>
                   </button>
                 ))}
               </div>
             )}
 
-            <div className="flex justify-between">
-              <Button variant="ghost" onClick={goBack}>
-                <ArrowLeft size={18} className="mr-2" />
+            <div className="flex justify-between gap-2">
+              <Button variant="ghost" onClick={goBack} size="sm" className="text-xs sm:text-sm">
+                <ArrowLeft size={16} className="mr-1 sm:mr-2" />
                 Voltar
               </Button>
               <Button 
                 onClick={handleConfirm}
                 isLoading={isSubmitting}
+                size="sm"
+                className="text-xs sm:text-sm"
               >
-                {existingPick ? 'Atualizar Palpite' : 'Confirmar Palpite'}
-                <Check size={18} className="ml-2" />
+                {existingPick ? 'Atualizar' : 'Confirmar'}
+                <Check size={16} className="ml-1 sm:ml-2" />
               </Button>
             </div>
           </div>
@@ -360,15 +372,15 @@ export function PickWizard({ fight, existingPick, userId }: PickWizardProps) {
       </Card>
 
       {/* Points Preview */}
-      <Card className="p-4">
+      <Card className="p-3 sm:p-4">
         <div className="flex items-center justify-between">
-          <span className="text-ufc-gray-400">Pontuação potencial:</span>
-          <span className="font-bebas text-3xl text-ufc-gold">
+          <span className="text-ufc-gray-400 text-sm sm:text-base">Pontuação potencial:</span>
+          <span className="font-bebas text-2xl sm:text-3xl text-ufc-gold">
             {potentialPoints} PTS
           </span>
         </div>
-        <div className="mt-2 text-xs text-ufc-gray-500">
-          <p>• Vencedor: 10 pts • Método: +20 pts • Detalhe: +30 pts • Máximo: 60 pts</p>
+        <div className="mt-2 text-[10px] sm:text-xs text-ufc-gray-500">
+          <p>• Vencedor: 10 pts • Método: +20 pts • Detalhe: +30 pts</p>
         </div>
       </Card>
     </div>
