@@ -17,3 +17,4 @@ COMMENT ON COLUMN profiles.cpf IS 'CPF do usuário para pagamentos PIX (formato:
 
 
 
+

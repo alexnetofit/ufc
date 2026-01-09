@@ -118,3 +118,61 @@ export async function getAvailableMonths(supabase: SupabaseClient): Promise<{ ye
 
   return months.slice(0, 12); // Últimos 12 meses com eventos
 }
+
+// Interface para evento disponível
+export interface EventOption {
+  id: string;
+  name: string;
+  scheduled_date: string;
+}
+
+// Buscar eventos disponíveis com rankings
+export async function getAvailableEvents(supabase: SupabaseClient): Promise<EventOption[]> {
+  const { data: events } = await supabase
+    .from('events')
+    .select('id, name, scheduled_date')
+    .order('scheduled_date', { ascending: false });
+
+  if (!events) return [];
+
+  return events;
+}
+
+// Buscar ranking de um evento específico
+export async function getEventRanking(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<RankingEntry[]> {
+  const { data: rankings } = await supabase
+    .from('rankings')
+    .select(`
+      user_id,
+      total_points,
+      picks_count,
+      correct_picks,
+      profiles!inner(nickname, avatar_url)
+    `)
+    .eq('event_id', eventId);
+
+  if (!rankings || rankings.length === 0) return [];
+
+  // Processar rankings
+  const result = rankings.map(r => {
+    const profileData = r.profiles;
+    const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+    
+    return {
+      user_id: r.user_id,
+      nickname: profile?.nickname || 'Usuário',
+      avatar_url: profile?.avatar_url || null,
+      total_points: r.total_points,
+      picks_count: r.picks_count,
+      correct_picks: r.correct_picks,
+      accuracy: r.picks_count > 0 
+        ? Math.round((r.correct_picks / r.picks_count) * 100) 
+        : 0,
+    };
+  });
+
+  return result.sort((a, b) => b.total_points - a.total_points);
+}

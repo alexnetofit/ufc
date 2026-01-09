@@ -167,3 +167,4 @@ export function GlobalRanking({ rankings, currentUserId }: GlobalRankingProps) {
 
 
 
+

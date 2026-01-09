@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
-import { getGlobalRanking, getAvailableMonths } from '@/lib/queries/ranking';
+import { getAvailableEvents, getAvailableMonths } from '@/lib/queries/ranking';
 import { RankingTabs } from '@/components/ranking/RankingTabs';
-import { GlobalRanking } from '@/components/ranking/GlobalRanking';
+import { EventRanking } from '@/components/ranking/EventRanking';
 import { MonthlyRanking } from '@/components/ranking/MonthlyRanking';
 
 export default async function RankingPage() {
@@ -9,8 +9,8 @@ export default async function RankingPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Buscar dados em paralelo
-  const [globalRanking, availableMonths] = await Promise.all([
-    getGlobalRanking(supabase),
+  const [availableEvents, availableMonths] = await Promise.all([
+    getAvailableEvents(supabase),
     getAvailableMonths(supabase),
   ]);
 
@@ -26,11 +26,11 @@ export default async function RankingPage() {
         </p>
       </div>
 
-      {/* Tabs com Ranking Global e Mensal */}
+      {/* Tabs com Ranking Por Evento e Mensal */}
       <RankingTabs
-        globalRankingContent={
-          <GlobalRanking 
-            rankings={globalRanking} 
+        eventRankingContent={
+          <EventRanking 
+            availableEvents={availableEvents} 
             currentUserId={user?.id} 
           />
         }
