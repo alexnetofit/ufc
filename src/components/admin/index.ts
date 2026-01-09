@@ -4,6 +4,7 @@ export { EventsManager } from './EventsManager';
 export { FightEditor } from './FightEditor';
 export { ReleaseEntryForm } from './ReleaseEntryForm';
 export { UserPicksHistory } from './UserPicksHistory';
+export { AdminSidebar } from './AdminSidebar';
 
 
 
