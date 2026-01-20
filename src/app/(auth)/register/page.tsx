@@ -176,6 +176,9 @@ export default function RegisterPage() {
         options: {
           data: {
             nickname,
+            full_name: fullName.trim(),
+            cpf: cpf.replace(/\D/g, ''),
+            phone: phone.replace(/\D/g, ''),
           },
         },
       });
@@ -189,11 +192,27 @@ export default function RegisterPage() {
         return;
       }
 
-      // Atualizar profile com os dados (trigger cria com default)
+      // Aguardar um pouco para o trigger criar o profile
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Atualizar profile com os dados completos
       if (authData.user) {
         const cpfNumbers = cpf.replace(/\D/g, '');
         const phoneNumbers = phone.replace(/\D/g, '');
-        await supabase
+        
+        // Fazer login para ter a sessão ativa (necessário para RLS)
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) {
+          console.error('Erro ao fazer login após registro:', signInError);
+          // Continuar mesmo assim - o profile será atualizado no próximo login
+        }
+
+        // Agora com a sessão ativa, podemos atualizar
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
             nickname,
@@ -202,6 +221,11 @@ export default function RegisterPage() {
             phone: phoneNumbers,
           })
           .eq('id', authData.user.id);
+
+        if (updateError) {
+          console.error('Erro ao atualizar profile:', updateError);
+          // Não bloquear o usuário, ele pode atualizar depois
+        }
       }
 
       toast.success('Conta criada com sucesso! Bem-vindo ao Sigma UFC!');
