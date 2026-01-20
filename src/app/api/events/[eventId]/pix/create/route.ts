@@ -176,8 +176,18 @@ export async function POST(
 
     if (pixResponse.error || !pixResponse.data) {
       console.error('[PIX Create] Erro AbacatePay:', pixResponse.error);
+      console.error('[PIX Create] Request enviado:', {
+        amount,
+        expiresIn: PIX_EXPIRES_IN,
+        hasCustomer: !!customerData,
+        customerData: customerData ? { ...customerData, taxId: '***' } : null,
+      });
       return NextResponse.json(
-        { success: false, error: 'Erro ao gerar PIX. Tente novamente.' },
+        { 
+          success: false, 
+          error: 'Erro ao gerar PIX. Tente novamente.',
+          debug: process.env.NODE_ENV === 'development' ? pixResponse.error : undefined,
+        },
         { status: 500 }
       );
     }

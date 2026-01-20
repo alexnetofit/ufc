@@ -83,20 +83,33 @@ class AbacatePayClient {
     }
 
     try {
+      console.log('[AbacatePay] Fazendo requisição:', { method, endpoint });
       const response = await fetch(url, options);
-      const data = await response.json();
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('[AbacatePay] Erro ao parsear JSON:', jsonError);
+        return {
+          data: null as unknown as T,
+          error: `Resposta inválida da API (${response.status})`,
+        };
+      }
 
       if (!response.ok) {
         console.error('[AbacatePay] Erro na requisição:', {
           status: response.status,
-          data,
+          statusText: response.statusText,
+          data: JSON.stringify(data),
         });
         return {
           data: null as unknown as T,
-          error: data.error || data.message || `HTTP ${response.status}`,
+          error: data.error || data.message || data.detail || `HTTP ${response.status}`,
         };
       }
 
+      console.log('[AbacatePay] Requisição bem sucedida');
       return data as AbacateResponse<T>;
     } catch (error) {
       console.error('[AbacatePay] Erro de rede:', error);
