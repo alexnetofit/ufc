@@ -12,6 +12,7 @@ const ABACATEPAY_BASE_URL = process.env.ABACATEPAY_BASE_URL || 'https://api.abac
 
 export interface Customer {
   name: string;
+  cellphone: string; // Telefone com DDD (apenas números)
   email: string;
   taxId: string; // CPF (apenas números)
 }

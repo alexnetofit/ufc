@@ -121,9 +121,13 @@ export async function POST(
     // Buscar profile do usuário para dados do cliente
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, cpf')
+      .select('full_name, cpf, phone')
       .eq('id', user.id)
       .single();
+
+    // Telefone fallback para usuários que não tem telefone cadastrado
+    const FALLBACK_PHONE = '5512991426510';
+    const customerPhone = profile?.phone || FALLBACK_PHONE;
 
     // Criar nova cobrança na AbacatePay
     const abacatePay = getAbacatePayClient();
@@ -131,11 +135,12 @@ export async function POST(
       amount,
       expiresIn: PIX_EXPIRES_IN,
       description: 'Estratégias de Palpite UFC',
-      customer: profile?.full_name && profile?.cpf ? {
-        name: profile.full_name,
+      customer: {
+        name: profile?.full_name || 'Usuário',
+        cellphone: customerPhone,
         email: user.email || '',
-        taxId: profile.cpf,
-      } : undefined,
+        taxId: profile?.cpf || '',
+      },
       metadata: {
         userId: user.id,
         eventId: eventId,

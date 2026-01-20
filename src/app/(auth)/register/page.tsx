@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Mail, Lock, User, UserPlus, CreditCard } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, CreditCard, Phone } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
@@ -15,6 +15,21 @@ function formatCPF(value: string): string {
   if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
   if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
   return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
+}
+
+// Função para formatar telefone (WhatsApp)
+function formatPhone(value: string): string {
+  const numbers = value.replace(/\D/g, '').slice(0, 11);
+  if (numbers.length <= 2) return numbers;
+  if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+  return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+}
+
+// Função para validar telefone
+function isValidPhone(phone: string): boolean {
+  const numbers = phone.replace(/\D/g, '');
+  // Deve ter 10 ou 11 dígitos (com DDD)
+  return numbers.length >= 10 && numbers.length <= 11;
 }
 
 // Função para validar CPF
@@ -52,6 +67,7 @@ export default function RegisterPage() {
   const [nickname, setNickname] = useState('');
   const [fullName, setFullName] = useState('');
   const [cpf, setCpf] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
     email?: string;
@@ -60,6 +76,7 @@ export default function RegisterPage() {
     nickname?: string;
     fullName?: string;
     cpf?: string;
+    phone?: string;
   }>({});
 
   const validate = () => {
@@ -75,6 +92,12 @@ export default function RegisterPage() {
       newErrors.cpf = 'CPF é obrigatório';
     } else if (!isValidCPF(cpf)) {
       newErrors.cpf = 'CPF inválido';
+    }
+
+    if (!phone) {
+      newErrors.phone = 'WhatsApp é obrigatório';
+    } else if (!isValidPhone(phone)) {
+      newErrors.phone = 'WhatsApp inválido (digite DDD + número)';
     }
 
     if (!email) {
@@ -169,12 +192,14 @@ export default function RegisterPage() {
       // Atualizar profile com os dados (trigger cria com default)
       if (authData.user) {
         const cpfNumbers = cpf.replace(/\D/g, '');
+        const phoneNumbers = phone.replace(/\D/g, '');
         await supabase
           .from('profiles')
           .update({ 
             nickname,
             full_name: fullName.trim(),
             cpf: cpfNumbers,
+            phone: phoneNumbers,
           })
           .eq('id', authData.user.id);
       }
@@ -220,6 +245,18 @@ export default function RegisterPage() {
           error={errors.cpf}
           disabled={isLoading}
           maxLength={14}
+        />
+
+        <Input
+          label="WhatsApp"
+          type="tel"
+          placeholder="(00) 00000-0000"
+          icon={<Phone size={20} />}
+          value={phone}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
+          error={errors.phone}
+          disabled={isLoading}
+          maxLength={15}
         />
 
         <Input
