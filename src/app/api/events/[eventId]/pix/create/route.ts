@@ -143,12 +143,22 @@ export async function POST(
     // Formatar CPF para o padrão da AbacatePay: XXX.XXX.XXX-XX
     const formatCpfForAbacate = (cpf: string): string => {
       const numbers = cpf.replace(/\D/g, '');
-      if (numbers.length !== 11) return cpf;
+      if (numbers.length !== 11) return '';
       return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
     };
     
-    const customerPhone = formatPhoneForAbacate(rawPhone);
-    const customerCpf = profile?.cpf ? formatCpfForAbacate(profile.cpf) : '';
+    // Verificar se temos todos os dados obrigatórios do cliente
+    const hasValidCpf = profile?.cpf && profile.cpf.replace(/\D/g, '').length === 11;
+    const hasValidName = profile?.full_name && profile.full_name.trim().length > 0;
+    const hasValidEmail = user.email && user.email.includes('@');
+    
+    // Só enviar customer se tivermos todos os dados obrigatórios
+    const customerData = (hasValidCpf && hasValidName && hasValidEmail) ? {
+      name: profile!.full_name!,
+      cellphone: formatPhoneForAbacate(rawPhone),
+      email: user.email!,
+      taxId: formatCpfForAbacate(profile!.cpf!),
+    } : undefined;
 
     // Criar nova cobrança na AbacatePay
     const abacatePay = getAbacatePayClient();
@@ -156,12 +166,7 @@ export async function POST(
       amount,
       expiresIn: PIX_EXPIRES_IN,
       description: 'Estratégias de Palpite UFC',
-      customer: {
-        name: profile?.full_name || 'Usuário',
-        cellphone: customerPhone,
-        email: user.email || '',
-        taxId: customerCpf,
-      },
+      customer: customerData,
       metadata: {
         userId: user.id,
         eventId: eventId,
