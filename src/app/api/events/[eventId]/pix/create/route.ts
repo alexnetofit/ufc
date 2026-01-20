@@ -126,8 +126,29 @@ export async function POST(
       .single();
 
     // Telefone fallback para usuários que não tem telefone cadastrado
-    const FALLBACK_PHONE = '5512991426510';
-    const customerPhone = profile?.phone || FALLBACK_PHONE;
+    const FALLBACK_PHONE = '12991426510'; // Sem o 55 do país
+    const rawPhone = profile?.phone || FALLBACK_PHONE;
+    
+    // Formatar telefone para o padrão da AbacatePay: (DD) XXXXX-XXXX
+    const formatPhoneForAbacate = (phone: string): string => {
+      const numbers = phone.replace(/\D/g, '');
+      // Remover código do país se existir
+      const phoneWithoutCountry = numbers.startsWith('55') ? numbers.slice(2) : numbers;
+      const ddd = phoneWithoutCountry.slice(0, 2);
+      const part1 = phoneWithoutCountry.slice(2, 7);
+      const part2 = phoneWithoutCountry.slice(7, 11);
+      return `(${ddd}) ${part1}-${part2}`;
+    };
+    
+    // Formatar CPF para o padrão da AbacatePay: XXX.XXX.XXX-XX
+    const formatCpfForAbacate = (cpf: string): string => {
+      const numbers = cpf.replace(/\D/g, '');
+      if (numbers.length !== 11) return cpf;
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
+    };
+    
+    const customerPhone = formatPhoneForAbacate(rawPhone);
+    const customerCpf = profile?.cpf ? formatCpfForAbacate(profile.cpf) : '';
 
     // Criar nova cobrança na AbacatePay
     const abacatePay = getAbacatePayClient();
@@ -139,7 +160,7 @@ export async function POST(
         name: profile?.full_name || 'Usuário',
         cellphone: customerPhone,
         email: user.email || '',
-        taxId: profile?.cpf || '',
+        taxId: customerCpf,
       },
       metadata: {
         userId: user.id,
