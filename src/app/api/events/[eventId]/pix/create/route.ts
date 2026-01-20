@@ -118,75 +118,23 @@ export async function POST(
       });
     }
 
-    // Buscar profile do usuário para dados do cliente
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, cpf, phone')
-      .eq('id', user.id)
-      .single();
-
-    // Telefone fallback para usuários que não tem telefone cadastrado
-    const FALLBACK_PHONE = '12991426510'; // Sem o 55 do país
-    const rawPhone = profile?.phone || FALLBACK_PHONE;
-    
-    // Formatar telefone para o padrão da AbacatePay: (DD) XXXXX-XXXX
-    const formatPhoneForAbacate = (phone: string): string => {
-      const numbers = phone.replace(/\D/g, '');
-      // Remover código do país se existir
-      const phoneWithoutCountry = numbers.startsWith('55') ? numbers.slice(2) : numbers;
-      const ddd = phoneWithoutCountry.slice(0, 2);
-      const part1 = phoneWithoutCountry.slice(2, 7);
-      const part2 = phoneWithoutCountry.slice(7, 11);
-      return `(${ddd}) ${part1}-${part2}`;
-    };
-    
-    // Formatar CPF para o padrão da AbacatePay: XXX.XXX.XXX-XX
-    const formatCpfForAbacate = (cpf: string): string => {
-      const numbers = cpf.replace(/\D/g, '');
-      if (numbers.length !== 11) return '';
-      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
-    };
-    
-    // Verificar se temos todos os dados obrigatórios do cliente
-    const hasValidCpf = profile?.cpf && profile.cpf.replace(/\D/g, '').length === 11;
-    const hasValidName = profile?.full_name && profile.full_name.trim().length > 0;
-    const hasValidEmail = user.email && user.email.includes('@');
-    
-    // Só enviar customer se tivermos todos os dados obrigatórios
-    const customerData = (hasValidCpf && hasValidName && hasValidEmail) ? {
-      name: profile!.full_name!,
-      cellphone: formatPhoneForAbacate(rawPhone),
-      email: user.email!,
-      taxId: formatCpfForAbacate(profile!.cpf!),
-    } : undefined;
-
-    // Criar nova cobrança na AbacatePay
+    // Criar nova cobrança na AbacatePay (sem customer para simplificar)
     const abacatePay = getAbacatePayClient();
+    
+    console.log('[PIX Create] Criando cobrança:', { amount, expiresIn: PIX_EXPIRES_IN });
+    
     const pixResponse = await abacatePay.createPix({
       amount,
       expiresIn: PIX_EXPIRES_IN,
-      description: 'Estratégias de Palpite UFC',
-      customer: customerData,
-      metadata: {
-        userId: user.id,
-        eventId: eventId,
-        amount: amount,
-      },
+      description: 'Sigma UFC - Palpites',
     });
 
     if (pixResponse.error || !pixResponse.data) {
       console.error('[PIX Create] Erro AbacatePay:', pixResponse.error);
-      console.error('[PIX Create] Request enviado:', {
-        amount,
-        expiresIn: PIX_EXPIRES_IN,
-        hasCustomer: !!customerData,
-        customerData: customerData ? { ...customerData, taxId: '***' } : null,
-      });
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Erro ao gerar PIX. Tente novamente.',
-          debug: process.env.NODE_ENV === 'development' ? pixResponse.error : undefined,
+          error: `Erro ao gerar PIX: ${pixResponse.error || 'Tente novamente.'}`,
         },
         { status: 500 }
       );
