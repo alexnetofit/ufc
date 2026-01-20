@@ -118,15 +118,48 @@ export async function POST(
       });
     }
 
-    // Criar nova cobrança na AbacatePay (sem customer para simplificar)
-    const abacatePay = getAbacatePayClient();
+    // Buscar profile do usuário para dados do cliente
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, cpf, phone')
+      .eq('id', user.id)
+      .single();
+
+    // Formatar telefone: (DD) XXXXX-XXXX
+    const formatPhone = (phone: string | null): string => {
+      if (!phone) return '(12) 99142-6510'; // Fallback
+      const numbers = phone.replace(/\D/g, '');
+      const clean = numbers.startsWith('55') ? numbers.slice(2) : numbers;
+      if (clean.length < 10) return '(12) 99142-6510';
+      return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7, 11)}`;
+    };
+
+    // Formatar CPF: XXX.XXX.XXX-XX
+    const formatCpf = (cpf: string | null): string | null => {
+      if (!cpf) return null;
+      const numbers = cpf.replace(/\D/g, '');
+      if (numbers.length !== 11) return null;
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
+    };
+
+    const formattedCpf = formatCpf(profile?.cpf || null);
     
-    console.log('[PIX Create] Criando cobrança:', { amount, expiresIn: PIX_EXPIRES_IN });
+    // Só incluir customer se tiver CPF válido (obrigatório pela AbacatePay)
+    const customerData = formattedCpf ? {
+      name: profile?.full_name || 'Cliente',
+      cellphone: formatPhone(profile?.phone),
+      email: user.email || '',
+      taxId: formattedCpf,
+    } : undefined;
+
+    // Criar nova cobrança na AbacatePay
+    const abacatePay = getAbacatePayClient();
     
     const pixResponse = await abacatePay.createPix({
       amount,
       expiresIn: PIX_EXPIRES_IN,
       description: 'Sigma UFC - Palpites',
+      customer: customerData,
     });
 
     if (pixResponse.error || !pixResponse.data) {
