@@ -13,7 +13,9 @@ import {
   Save,
   X,
   Calendar,
-  Clock
+  Clock,
+  Download,
+  CheckCircle
 } from 'lucide-react';
 import { Card, Button, Input } from '@/components/ui';
 import { FightEditor } from './FightEditor';
@@ -32,6 +34,7 @@ interface EventsManagerProps {
 export function EventsManager({ events, upcomingCount, pastCount }: EventsManagerProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
+  const [fetchingResults, setFetchingResults] = useState<string | null>(null);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<string | null>(null);
   const [editingFight, setEditingFight] = useState<string | null>(null);
@@ -118,6 +121,37 @@ export function EventsManager({ events, upcomingCount, pastCount }: EventsManage
     setExpandedEvent(expandedEvent === eventId ? null : eventId);
   };
 
+  const fetchResults = async (eventId: string) => {
+    setFetchingResults(eventId);
+    try {
+      const response = await fetch('/api/admin/events/fetch-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao buscar resultados');
+      }
+
+      if (data.fightsUpdated > 0) {
+        toast.success(`${data.fightsUpdated} lutas atualizadas, ${data.picksUpdated} palpites processados`);
+      } else if (data.fightsAlreadyFinished === data.totalFights) {
+        toast.info('Todas as lutas já estavam atualizadas');
+      } else {
+        toast.warning(data.message || 'Nenhum resultado encontrado');
+      }
+
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao buscar resultados');
+    } finally {
+      setFetchingResults(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Sync Button */}
@@ -157,8 +191,11 @@ export function EventsManager({ events, upcomingCount, pastCount }: EventsManage
         {events.map((event) => {
           const isExpanded = expandedEvent === event.id;
           const isEditing = editingEvent === event.id;
+          const isFetching = fetchingResults === event.id;
           const isPast = new Date(event.scheduled_date) <= new Date();
           const fightsCount = event.fights?.length || 0;
+          const finishedFights = event.fights?.filter(f => f.status === 'finished').length || 0;
+          const allFinished = fightsCount > 0 && finishedFights === fightsCount;
 
           return (
             <Card key={event.id} className="overflow-hidden">
@@ -206,9 +243,12 @@ export function EventsManager({ events, upcomingCount, pastCount }: EventsManage
                           })}
                         </span>
                         {event.location && (
-                          <span className="text-ufc-gray-500">📍 {event.location}</span>
+                          <span className="text-ufc-gray-500">| {event.location}</span>
                         )}
-                        <span className="text-ufc-gray-500">🥊 {fightsCount} lutas</span>
+                        <span className={`flex items-center gap-1 ${allFinished ? 'text-green-400' : 'text-ufc-gray-500'}`}>
+                          {allFinished && <CheckCircle size={12} />}
+                          {finishedFights}/{fightsCount} lutas
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -232,6 +272,20 @@ export function EventsManager({ events, upcomingCount, pastCount }: EventsManage
                     </>
                   ) : (
                     <>
+                      {isPast && (
+                        <button
+                          onClick={() => fetchResults(event.id)}
+                          disabled={isFetching}
+                          className={`p-2 rounded-lg transition-colors ${
+                            allFinished 
+                              ? 'text-green-400 hover:bg-green-500/20' 
+                              : 'text-yellow-400 hover:bg-yellow-500/20'
+                          }`}
+                          title="Buscar Resultados"
+                        >
+                          <Download size={18} className={isFetching ? 'animate-pulse' : ''} />
+                        </button>
+                      )}
                       <button
                         onClick={() => startEditEvent(event)}
                         className="p-2 rounded-lg text-ufc-gray-400 hover:text-white hover:bg-ufc-gray-700 transition-colors"

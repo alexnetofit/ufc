@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Card } from '@/components/ui';
 import { Users, CreditCard, Calendar, TrendingUp } from 'lucide-react';
+import { LastEventCard } from '@/components/admin/LastEventCard';
 
 async function getStats() {
   const supabase = await createClient();
@@ -49,8 +50,43 @@ async function getStats() {
   };
 }
 
+async function getLastEvent() {
+  const supabase = await createClient();
+  
+  // Buscar último evento passado
+  const { data: event } = await supabase
+    .from('events')
+    .select(`
+      id,
+      name,
+      scheduled_date,
+      fights(id, status)
+    `)
+    .lte('scheduled_date', new Date().toISOString())
+    .order('scheduled_date', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!event) return null;
+
+  const fights = event.fights as { id: string; status: string }[];
+  const totalFights = fights?.length || 0;
+  const finishedFights = fights?.filter(f => f.status === 'finished').length || 0;
+
+  return {
+    id: event.id,
+    name: event.name,
+    scheduled_date: event.scheduled_date,
+    totalFights,
+    finishedFights,
+  };
+}
+
 export default async function AdminDashboard() {
-  const stats = await getStats();
+  const [stats, lastEvent] = await Promise.all([
+    getStats(),
+    getLastEvent(),
+  ]);
 
   return (
     <div>
@@ -116,8 +152,11 @@ export default async function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Last Event + Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Last Event Card */}
+        <LastEventCard event={lastEvent} />
+
         <Card className="p-6">
           <h3 className="text-lg font-oswald text-white mb-4">RESUMO</h3>
           <div className="space-y-3">
@@ -147,19 +186,19 @@ export default async function AdminDashboard() {
               href="/admin/events"
               className="block px-4 py-3 bg-ufc-gray-800 hover:bg-ufc-gray-700 rounded-lg text-white transition-colors"
             >
-              🔄 Sincronizar Eventos da API
+              Sincronizar Eventos da API
             </a>
             <a
               href="/admin/payments"
               className="block px-4 py-3 bg-ufc-gray-800 hover:bg-ufc-gray-700 rounded-lg text-white transition-colors"
             >
-              💳 Ver Pagamentos Pendentes
+              Ver Pagamentos Pendentes
             </a>
             <a
               href="/admin/users"
               className="block px-4 py-3 bg-ufc-gray-800 hover:bg-ufc-gray-700 rounded-lg text-white transition-colors"
             >
-              👥 Gerenciar Usuários
+              Gerenciar Usuários
             </a>
           </div>
         </Card>
