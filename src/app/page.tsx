@@ -20,7 +20,7 @@ export default function Home() {
           <img 
             src="/logo-bolao-walker.png" 
             alt="Bolão Walker" 
-            className="h-32 md:h-48 w-auto mx-auto"
+            className="h-48 md:h-64 w-auto mx-auto"
           />
         </div>
 
