@@ -3,7 +3,7 @@ import { Toaster } from 'sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Sigma UFC - Palpites do UFC',
+  title: 'Bolão Walker - Palpites do UFC',
   description: 'Faça seus palpites nas lutas do UFC e ganhe pontos!',
 };
 

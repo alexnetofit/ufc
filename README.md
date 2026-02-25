@@ -1,4 +1,4 @@
-# Sigma UFC
+# Bolão Walker
 
 Um SaaS de palpites do UFC, onde usuários fazem palpites em lutas do UFC e competem por pontos no ranking.
 

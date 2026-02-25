@@ -95,7 +95,7 @@ export default async function AdminDashboard() {
           PAINEL ADMINISTRATIVO
         </h1>
         <p className="text-ufc-gray-400">
-          Gerencie usuários, pagamentos e eventos do Sigma UFC
+          Gerencie usuários, pagamentos e eventos do Bolão Walker
         </p>
       </div>
 

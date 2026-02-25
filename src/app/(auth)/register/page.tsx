@@ -228,7 +228,7 @@ export default function RegisterPage() {
         }
       }
 
-      toast.success('Conta criada com sucesso! Bem-vindo ao Sigma UFC!');
+      toast.success('Conta criada com sucesso! Bem-vindo ao Bolão Walker!');
       router.push('/dashboard');
       router.refresh();
     } catch (error) {
@@ -244,7 +244,7 @@ export default function RegisterPage() {
         CRIAR CONTA
       </h1>
       <p className="text-ufc-gray-400 text-center mb-8">
-        Entre para o octógono do Sigma UFC
+        Entre para o octógono do Bolão Walker
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">

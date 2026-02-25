@@ -21,8 +21,8 @@ export default function AuthResetLayout({
       {/* Logo */}
       <Link href="/" className="relative z-10 mb-8">
         <img 
-          src="/logo-sigma-ufc.png" 
-          alt="Sigma UFC" 
+          src="/logo-bolao-walker.png" 
+          alt="Bolão Walker" 
           className="h-20 w-auto mx-auto"
         />
       </Link>
@@ -36,7 +36,7 @@ export default function AuthResetLayout({
 
       {/* Footer */}
       <p className="relative z-10 mt-8 text-ufc-gray-500 text-sm">
-        © 2025 Sigma UFC
+        © 2025 Bolão Walker
       </p>
     </div>
   );

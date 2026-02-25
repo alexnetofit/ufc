@@ -158,7 +158,7 @@ export async function POST(
     const pixResponse = await abacatePay.createPix({
       amount,
       expiresIn: PIX_EXPIRES_IN,
-      description: 'Sigma UFC - Palpites',
+      description: 'Bolão Walker - Palpites',
       customer: customerData,
     });
 

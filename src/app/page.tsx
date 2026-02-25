@@ -18,8 +18,8 @@ export default function Home() {
         {/* Logo */}
         <div className="mb-8">
           <img 
-            src="/logo-sigma-ufc.png" 
-            alt="Sigma UFC" 
+            src="/logo-bolao-walker.png" 
+            alt="Bolão Walker" 
             className="h-32 md:h-48 w-auto mx-auto"
           />
         </div>
@@ -79,7 +79,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="absolute bottom-4 text-ufc-gray-500 text-sm">
-        © 2025 Sigma UFC - Não é betting, é diversão!
+        © 2025 Bolão Walker - Não é betting, é diversão!
       </footer>
     </main>
   );

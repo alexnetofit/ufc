@@ -53,8 +53,8 @@ export function Navbar({ user, profile }: NavbarProps) {
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2">
             <img 
-              src="/logo-sigma-ufc.png" 
-              alt="Sigma UFC" 
+              src="/logo-bolao-walker.png" 
+              alt="Bolão Walker" 
               className="h-10 w-auto"
             />
           </Link>
