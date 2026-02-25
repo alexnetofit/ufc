@@ -9,6 +9,8 @@ import { formatDate, formatRelative } from '@/lib/utils/date';
 import { ArrowLeft, Calendar, MapPin, Swords, Lock, Unlock, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Fight, Pick } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 interface EventPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;

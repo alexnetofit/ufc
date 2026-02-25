@@ -4,6 +4,8 @@ import { EventCard } from '@/components/events/EventCard';
 import { Card } from '@/components/ui';
 import { Calendar } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function EventsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
