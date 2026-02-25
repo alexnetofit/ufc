@@ -116,7 +116,7 @@ export function LastEventCard({ event }: LastEventCardProps) {
         onClick={fetchResults}
         disabled={loading}
         className="w-full gap-2"
-        variant={allFinished ? 'outline' : 'default'}
+        variant={allFinished ? 'outline' : 'primary'}
       >
         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
         {loading ? 'Buscando...' : 'Buscar Resultados'}
