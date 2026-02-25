@@ -159,10 +159,11 @@ export async function POST() {
             console.error('[SYNC] Error creating fight:', fightError);
           }
         } else {
-          // Atualizar luta existente
+          // Atualizar luta existente (inclui event_id para corrigir atribuições erradas)
           await supabase
             .from('fights')
             .update({
+              event_id: eventId,
               fighter1_name: fight.fighter1_name,
               fighter2_name: fight.fighter2_name,
               weight_class: fight.weight_class,

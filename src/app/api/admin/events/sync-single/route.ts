@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('fights')
           .update({
+            event_id: event.id,
             fighter1_name: fight.fighter1_name,
             fighter2_name: fight.fighter2_name,
             weight_class: fight.weight_class,
