@@ -34,6 +34,7 @@ interface EventsManagerProps {
 export function EventsManager({ events, upcomingCount, pastCount }: EventsManagerProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
+  const [syncingSingle, setSyncingSingle] = useState<string | null>(null);
   const [fetchingResults, setFetchingResults] = useState<string | null>(null);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<string | null>(null);
@@ -149,6 +150,35 @@ export function EventsManager({ events, upcomingCount, pastCount }: EventsManage
       toast.error(error instanceof Error ? error.message : 'Erro ao buscar resultados');
     } finally {
       setFetchingResults(null);
+    }
+  };
+
+  const syncSingleEvent = async (eventId: string) => {
+    setSyncingSingle(eventId);
+    try {
+      const response = await fetch('/api/admin/events/sync-single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao sincronizar');
+      }
+
+      if (data.fightsCreated > 0) {
+        toast.success(`${data.fightsCreated} novas lutas adicionadas, ${data.fightsUpdated} atualizadas`);
+      } else {
+        toast.info(`Todas as lutas já estavam sincronizadas (${data.fightsUpdated} atualizadas)`);
+      }
+
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao sincronizar evento');
+    } finally {
+      setSyncingSingle(null);
     }
   };
 
@@ -272,6 +302,14 @@ export function EventsManager({ events, upcomingCount, pastCount }: EventsManage
                     </>
                   ) : (
                     <>
+                      <button
+                        onClick={() => syncSingleEvent(event.id)}
+                        disabled={syncingSingle === event.id}
+                        className="p-2 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-colors"
+                        title="Sincronizar Lutas"
+                      >
+                        <RefreshCw size={18} className={syncingSingle === event.id ? 'animate-spin' : ''} />
+                      </button>
                       {isPast && (
                         <button
                           onClick={() => fetchResults(event.id)}
