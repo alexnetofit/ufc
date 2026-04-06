@@ -160,6 +160,11 @@ export async function POST(
       expiresIn: PIX_EXPIRES_IN,
       description: 'Bolão Walker - Palpites',
       customer: customerData,
+      metadata: {
+        supabaseUserId: user.id,
+        payerEmail: user.email ?? '',
+        eventId,
+      },
     });
 
     if (pixResponse.error || !pixResponse.data) {

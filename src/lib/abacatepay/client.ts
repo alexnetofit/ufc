@@ -26,6 +26,8 @@ export interface CreatePixRequest {
     userId?: string;
     eventId?: string;
     amount?: number;
+    supabaseUserId?: string;
+    payerEmail?: string;
   };
 }
 
