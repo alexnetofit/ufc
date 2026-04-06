@@ -7,56 +7,12 @@ import { toast } from 'sonner';
 import { Mail, Lock, User, UserPlus, CreditCard, Phone } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { getSupabaseClient } from '@/lib/supabase/client';
-
-// Função para formatar CPF
-function formatCPF(value: string): string {
-  const numbers = value.replace(/\D/g, '').slice(0, 11);
-  if (numbers.length <= 3) return numbers;
-  if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
-  if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
-  return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
-}
-
-// Função para formatar telefone (WhatsApp)
-function formatPhone(value: string): string {
-  const numbers = value.replace(/\D/g, '').slice(0, 11);
-  if (numbers.length <= 2) return numbers;
-  if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-  return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
-}
-
-// Função para validar telefone
-function isValidPhone(phone: string): boolean {
-  const numbers = phone.replace(/\D/g, '');
-  // Deve ter 10 ou 11 dígitos (com DDD)
-  return numbers.length >= 10 && numbers.length <= 11;
-}
-
-// Função para validar CPF
-function isValidCPF(cpf: string): boolean {
-  const numbers = cpf.replace(/\D/g, '');
-  if (numbers.length !== 11) return false;
-  if (/^(\d)\1+$/.test(numbers)) return false; // CPFs com todos dígitos iguais
-  
-  // Validação dos dígitos verificadores
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    sum += parseInt(numbers[i]) * (10 - i);
-  }
-  let digit1 = (sum * 10) % 11;
-  if (digit1 === 10) digit1 = 0;
-  if (digit1 !== parseInt(numbers[9])) return false;
-  
-  sum = 0;
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(numbers[i]) * (11 - i);
-  }
-  let digit2 = (sum * 10) % 11;
-  if (digit2 === 10) digit2 = 0;
-  if (digit2 !== parseInt(numbers[10])) return false;
-  
-  return true;
-}
+import {
+  formatCPF,
+  formatPhoneBR,
+  isValidCPF,
+  isValidPhoneBR,
+} from '@/lib/validation/brazilian-person';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -96,7 +52,7 @@ export default function RegisterPage() {
 
     if (!phone) {
       newErrors.phone = 'WhatsApp é obrigatório';
-    } else if (!isValidPhone(phone)) {
+    } else if (!isValidPhoneBR(phone)) {
       newErrors.phone = 'WhatsApp inválido (digite DDD + número)';
     }
 
@@ -277,7 +233,7 @@ export default function RegisterPage() {
           placeholder="(00) 00000-0000"
           icon={<Phone size={20} />}
           value={phone}
-          onChange={(e) => setPhone(formatPhone(e.target.value))}
+          onChange={(e) => setPhone(formatPhoneBR(e.target.value))}
           error={errors.phone}
           disabled={isLoading}
           maxLength={15}

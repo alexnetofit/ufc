@@ -3,10 +3,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { User, Camera, Save, Trophy, Target, TrendingUp, Calendar, Mail, Key, LogOut, Loader2 } from 'lucide-react';
+import { User, Camera, Save, Trophy, Target, TrendingUp, Calendar, Mail, Key, LogOut, Loader2, CreditCard, Phone } from 'lucide-react';
 import { Button, Input, Card, CardContent, CardHeader } from '@/components/ui';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import {
+  formatCPF,
+  formatPhoneBR,
+  isValidCPF,
+  isValidPhoneBR,
+} from '@/lib/validation/brazilian-person';
 import type { Profile } from '@/types';
+
+type ProfileFormErrors = {
+  nickname?: string;
+  fullName?: string;
+  cpf?: string;
+  phone?: string;
+};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -22,11 +35,14 @@ export default function ProfilePage() {
     eventsParticipated: 0,
   });
   const [nickname, setNickname] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
-  const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState<ProfileFormErrors>({});
 
   useEffect(() => {
     loadProfile();
@@ -49,6 +65,9 @@ export default function ProfilePage() {
       if (profileData) {
         setProfile(profileData);
         setNickname(profileData.nickname);
+        setFullName(profileData.full_name?.trim() ?? '');
+        setCpf(profileData.cpf ? formatCPF(profileData.cpf) : '');
+        setPhone(profileData.phone ? formatPhoneBR(profileData.phone) : '');
       }
 
       // Buscar stats
@@ -75,29 +94,48 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!profile) return;
 
-    // Validação
+    const errors: ProfileFormErrors = {};
     if (!nickname.trim()) {
-      setError('Nickname é obrigatório');
-      return;
+      errors.nickname = 'Nickname é obrigatório';
+    } else if (nickname.length < 3) {
+      errors.nickname = 'Nickname deve ter pelo menos 3 caracteres';
+    } else if (nickname.length > 20) {
+      errors.nickname = 'Nickname deve ter no máximo 20 caracteres';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(nickname)) {
+      errors.nickname = 'Nickname só pode ter letras, números e _';
     }
-    if (nickname.length < 3) {
-      setError('Nickname deve ter pelo menos 3 caracteres');
-      return;
+
+    const cpfDigits = cpf.replace(/\D/g, '');
+    const phoneDigits = phone.replace(/\D/g, '');
+    const nameTrim = fullName.trim();
+    const hasPixFields =
+      cpfDigits.length > 0 || phoneDigits.length > 0 || nameTrim.length > 0;
+
+    if (hasPixFields) {
+      if (nameTrim.split(/\s+/).filter(Boolean).length < 2) {
+        errors.fullName = 'Digite nome e sobrenome';
+      }
+      if (!cpfDigits) {
+        errors.cpf = 'CPF é obrigatório para pagamento PIX';
+      } else if (!isValidCPF(cpf)) {
+        errors.cpf = 'CPF inválido';
+      }
+      if (!phoneDigits) {
+        errors.phone = 'WhatsApp é obrigatório para pagamento PIX';
+      } else if (!isValidPhoneBR(phone)) {
+        errors.phone = 'WhatsApp inválido (DDD + número)';
+      }
     }
-    if (nickname.length > 20) {
-      setError('Nickname deve ter no máximo 20 caracteres');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(nickname)) {
-      setError('Nickname só pode ter letras, números e _');
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
     setIsSaving(true);
-    setError('');
+    setFormErrors({});
 
     try {
-      // Verificar se nickname já existe (se mudou)
       if (nickname !== profile.nickname) {
         const { data: existing } = await supabase
           .from('profiles')
@@ -107,7 +145,22 @@ export default function ProfilePage() {
           .single();
 
         if (existing) {
-          setError('Este nickname já está em uso');
+          setFormErrors({ nickname: 'Este nickname já está em uso' });
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      if (cpfDigits && cpfDigits !== (profile.cpf ?? '')) {
+        const { data: existingCpf } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('cpf', cpfDigits)
+          .neq('id', profile.id)
+          .maybeSingle();
+
+        if (existingCpf) {
+          setFormErrors({ cpf: 'Este CPF já está cadastrado' });
           setIsSaving(false);
           return;
         }
@@ -115,12 +168,23 @@ export default function ProfilePage() {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ nickname })
+        .update({
+          nickname,
+          full_name: nameTrim || null,
+          cpf: cpfDigits || null,
+          phone: phoneDigits || null,
+        })
         .eq('id', profile.id);
 
       if (updateError) throw updateError;
 
-      setProfile({ ...profile, nickname });
+      setProfile({
+        ...profile,
+        nickname,
+        full_name: nameTrim || null,
+        cpf: cpfDigits || null,
+        phone: phoneDigits || null,
+      });
       toast.success('Perfil atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -242,6 +306,18 @@ export default function ProfilePage() {
     ? Math.round((stats.correctPicks / stats.totalPicks) * 100) 
     : 0;
 
+  const cpfDigits = cpf.replace(/\D/g, '');
+  const phoneDigits = phone.replace(/\D/g, '');
+  const nameTrim = fullName.trim();
+  const profileFull = profile?.full_name?.trim() ?? '';
+  const profileCpf = profile?.cpf ?? '';
+  const profilePhone = profile?.phone ?? '';
+  const profileUnchanged =
+    nickname === profile?.nickname &&
+    nameTrim === profileFull &&
+    cpfDigits === profileCpf &&
+    phoneDigits === profilePhone;
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       {/* Header */}
@@ -311,16 +387,61 @@ export default function ProfilePage() {
             value={nickname}
             onChange={(e) => {
               setNickname(e.target.value);
-              setError('');
+              setFormErrors((prev) => ({ ...prev, nickname: undefined }));
             }}
-            error={error}
+            error={formErrors.nickname}
             placeholder="Seu apelido único"
+          />
+
+          <p className="text-sm text-ufc-gray-500 -mt-2">
+            Nome completo, CPF e WhatsApp abaixo são usados na cobrança PIX (seus dados na fatura).
+          </p>
+
+          <Input
+            label="Nome completo"
+            type="text"
+            icon={<User size={20} />}
+            value={fullName}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              setFormErrors((prev) => ({ ...prev, fullName: undefined }));
+            }}
+            error={formErrors.fullName}
+            placeholder="Nome e sobrenome"
+          />
+
+          <Input
+            label="CPF"
+            type="text"
+            icon={<CreditCard size={20} />}
+            value={cpf}
+            onChange={(e) => {
+              setCpf(formatCPF(e.target.value));
+              setFormErrors((prev) => ({ ...prev, cpf: undefined }));
+            }}
+            error={formErrors.cpf}
+            placeholder="000.000.000-00"
+            maxLength={14}
+          />
+
+          <Input
+            label="WhatsApp"
+            type="tel"
+            icon={<Phone size={20} />}
+            value={phone}
+            onChange={(e) => {
+              setPhone(formatPhoneBR(e.target.value));
+              setFormErrors((prev) => ({ ...prev, phone: undefined }));
+            }}
+            error={formErrors.phone}
+            placeholder="(00) 00000-0000"
+            maxLength={15}
           />
 
           <Button 
             onClick={handleSave} 
             isLoading={isSaving}
-            disabled={nickname === profile?.nickname}
+            disabled={profileUnchanged}
             className="w-full"
           >
             <Save size={18} className="mr-2" />
