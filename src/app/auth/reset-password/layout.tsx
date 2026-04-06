@@ -19,11 +19,11 @@ export default function AuthResetLayout({
       />
 
       {/* Logo */}
-      <Link href="/" className="relative z-10 mb-8">
+      <Link href="/" className="relative z-10 mb-10">
         <img 
           src="/logo-bolao-walker.png" 
           alt="Bolão Walker" 
-          className="h-20 w-auto mx-auto"
+          className="h-36 w-auto mx-auto sm:h-40"
         />
       </Link>
 
