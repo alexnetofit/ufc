@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { getAbacatePayClient, isAbacatePayConfigured } from '@/lib/abacatepay/client';
+import {
+  formatBrazilPhoneForAbacate,
+  formatCPFForTaxId,
+  getBrazilPhoneDigits,
+  hasFullLegalName,
+  isValidCPF,
+} from '@/lib/validation/brazilian-person';
 import { PAYMENT_PLAN_AMOUNTS, type PaymentPlan } from '@/types';
 
 // Tempo de expiração do PIX em segundos (15 minutos)
@@ -118,43 +124,70 @@ export async function POST(
       });
     }
 
-    // Buscar profile do usuário para dados do cliente
-    const { data: profile } = await supabase
+    // Dados do cadastro (perfil + e-mail da conta) — obrigatórios para PIX com cliente real na AbacatePay
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name, cpf, phone')
       .eq('id', user.id)
       .single();
 
-    // Formatar telefone: (DD) XXXXX-XXXX
-    const formatPhone = (phone: string | null): string => {
-      if (!phone) return '(12) 99142-6510'; // Fallback
-      const numbers = phone.replace(/\D/g, '');
-      const clean = numbers.startsWith('55') ? numbers.slice(2) : numbers;
-      if (clean.length < 10) return '(12) 99142-6510';
-      return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7, 11)}`;
+    if (profileError || !profile) {
+      return NextResponse.json(
+        { success: false, error: 'Não foi possível carregar seu perfil. Tente novamente.' },
+        { status: 500 }
+      );
+    }
+
+    const accountEmail = user.email?.trim();
+    if (!accountEmail) {
+      return NextResponse.json(
+        { success: false, error: 'Sua conta não possui e-mail. Entre em contato com o suporte.' },
+        { status: 400 }
+      );
+    }
+
+    const fullName = profile.full_name?.trim() ?? '';
+    if (!hasFullLegalName(fullName)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Complete seu nome completo no perfil (nome e sobrenome) antes de gerar o PIX.',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!profile.cpf || !isValidCPF(profile.cpf)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Cadastre um CPF válido no perfil antes de gerar o PIX.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const phoneDigits = getBrazilPhoneDigits(profile.phone);
+    if (!phoneDigits) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Cadastre um WhatsApp válido com DDD no perfil antes de gerar o PIX.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const customerData = {
+      name: fullName,
+      cellphone: formatBrazilPhoneForAbacate(phoneDigits),
+      email: accountEmail,
+      taxId: formatCPFForTaxId(profile.cpf),
     };
 
-    // Formatar CPF: XXX.XXX.XXX-XX
-    const formatCpf = (cpf: string | null): string | null => {
-      if (!cpf) return null;
-      const numbers = cpf.replace(/\D/g, '');
-      if (numbers.length !== 11) return null;
-      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
-    };
-
-    const formattedCpf = formatCpf(profile?.cpf || null);
-    
-    // Só incluir customer se tiver CPF válido (obrigatório pela AbacatePay)
-    const customerData = formattedCpf ? {
-      name: profile?.full_name || 'Cliente',
-      cellphone: formatPhone(profile?.phone),
-      email: user.email || '',
-      taxId: formattedCpf,
-    } : undefined;
-
-    // Criar nova cobrança na AbacatePay
     const abacatePay = getAbacatePayClient();
-    
+
     const pixResponse = await abacatePay.createPix({
       amount,
       expiresIn: PIX_EXPIRES_IN,
@@ -162,7 +195,9 @@ export async function POST(
       customer: customerData,
       metadata: {
         supabaseUserId: user.id,
-        payerEmail: user.email ?? '',
+        payerEmail: accountEmail,
+        payerName: fullName,
+        payerCpfDigits: profile.cpf.replace(/\D/g, ''),
         eventId,
       },
     });

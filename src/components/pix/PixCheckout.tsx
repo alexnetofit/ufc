@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { QrCode, Copy, Check, Clock, AlertCircle, CheckCircle2, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button, Card, CardContent } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
@@ -311,9 +312,19 @@ export function PixCheckout({ eventId, eventName, onPaymentConfirmed }: PixCheck
           )}
 
           {error && !isPaymentSystemDisabled && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
-              <AlertCircle className="text-red-500 flex-shrink-0" size={18} />
-              <span className="text-red-400 text-sm">{error}</span>
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="text-red-500 flex-shrink-0" size={18} />
+                <span className="text-red-400 text-sm">{error}</span>
+              </div>
+              {error.toLowerCase().includes('perfil') && (
+                <Link
+                  href="/profile"
+                  className="mt-2 inline-block text-sm font-medium text-ufc-red hover:text-ufc-red-dark underline"
+                >
+                  Abrir meu perfil
+                </Link>
+              )}
             </div>
           )}
 

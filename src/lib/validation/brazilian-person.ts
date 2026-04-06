@@ -39,7 +39,33 @@ export function formatPhoneBR(value: string): string {
   return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
 }
 
+/** DDD + número (10 ou 11 dígitos), removendo 55 internacional quando aplicável */
+export function getBrazilPhoneDigits(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  let n = phone.replace(/\D/g, '');
+  if (n.startsWith('55') && n.length >= 12) n = n.slice(2);
+  if (n.length < 10 || n.length > 11) return null;
+  return n;
+}
+
 export function isValidPhoneBR(phone: string): boolean {
-  const numbers = phone.replace(/\D/g, '');
-  return numbers.length >= 10 && numbers.length <= 11;
+  return getBrazilPhoneDigits(phone) !== null;
+}
+
+/** Formato esperado em APIs de pagamento (ex.: AbacatePay) */
+export function formatBrazilPhoneForAbacate(digits: string): string {
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6, 10)}`;
+}
+
+/** CPF formatado XXX.XXX.XXX-XX a partir do valor salvo no perfil */
+export function formatCPFForTaxId(cpf: string): string {
+  const numbers = cpf.replace(/\D/g, '');
+  return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
+}
+
+export function hasFullLegalName(name: string): boolean {
+  return name.trim().split(/\s+/).filter(Boolean).length >= 2;
 }

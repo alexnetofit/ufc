@@ -28,6 +28,8 @@ export interface CreatePixRequest {
     amount?: number;
     supabaseUserId?: string;
     payerEmail?: string;
+    payerName?: string;
+    payerCpfDigits?: string;
   };
 }
 
