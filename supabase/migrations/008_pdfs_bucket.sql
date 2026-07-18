@@ -1,0 +1,8 @@
+-- =============================================
+-- MIGRATION 008: Storage para PDFs gerados
+-- =============================================
+-- NOTA: Executar manualmente no Supabase Dashboard:
+-- 1. Ir em Storage > Create new bucket
+-- 2. Nome: "pdfs"
+-- 3. Public bucket: SIM (para o endpoint /api/pdf/generate retornar URL pública)
+-- =============================================

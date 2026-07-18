@@ -60,6 +60,9 @@ RAPIDAPI_HOST=mmaapi.p.rapidapi.com
 
 # Cron Secret
 CRON_SECRET=um_secret_seguro_aqui
+
+# PDF Generation
+PDF_API_SECRET=um_secret_seguro_aqui
 ```
 
 ### 4. Configurar banco de dados
@@ -73,6 +76,28 @@ npm run dev
 ```
 
 Acesse: http://localhost:3000
+
+## Geração de PDF
+
+Endpoint genérico para renderizar um HTML em PDF e hospedá-lo no Supabase Storage.
+
+Requer o bucket `pdfs` (público) criado no Supabase — ver `supabase/migrations/008_pdfs_bucket.sql`.
+
+```bash
+curl -X POST https://seu-dominio/api/pdf/generate \
+  -H "Authorization: Bearer $PDF_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<html>...</html>", "filename": "plano-alimentar-alex-neto"}'
+```
+
+Resposta:
+
+```json
+{ "success": true, "url": "https://.../storage/v1/object/public/pdfs/plano-alimentar-alex-neto-<uuid>.pdf" }
+```
+
+- `html` (obrigatório): documento HTML completo a ser renderizado (máx. ~2MB).
+- `filename` (opcional): prefixo do nome do arquivo; um UUID é sempre anexado para evitar colisões.
 
 ## Cron Jobs
 
