@@ -76,39 +76,57 @@ Acesse: http://localhost:3000
 
 ## Geração de PDF
 
-Endpoint genérico para renderizar um HTML em PDF e hospedá-lo no Supabase Storage.
+Endpoint que recebe os dados de uma consulta nutricional, monta o HTML do plano alimentar **no próprio backend** (template em `src/lib/pdf/plano-alimentar-template.ts`) e hospeda o PDF resultante no Supabase Storage. A geração do visual não depende de uma IA externa produzir HTML — a IA (Leona ou qualquer outro sistema) só precisa mandar os dados coletados.
 
 Requer o bucket `pdfs` (público) criado no Supabase — ver `supabase/migrations/008_pdfs_bucket.sql`.
 
 **Endpoint aberto, sem autenticação** (decisão consciente para simplificar a integração com ferramentas low-code como o Leona — qualquer um com a URL pode gerar PDFs).
 
-O endpoint aceita o corpo da requisição em qualquer um destes formatos (não precisa escolher/declarar qual — ele detecta sozinho):
+**Motivo do Base64**: ferramentas low-code (Leona) costumam remover `<`, `>` e `"` do texto de uma IA antes de repassá-lo (proteção contra HTML/JS em mensagens de chat), o que corrompe tanto HTML quanto JSON cru. Por isso o corpo pode vir em Base64 (alfabeto sem esses caracteres) — o endpoint decodifica automaticamente antes de interpretar.
 
-**1. JSON** (`{"html": "...", "filename": "..."}`):
+O endpoint detecta sozinho o formato do corpo — não precisa declarar qual:
+
+**1. Dados estruturados do plano alimentar** (o uso principal — o HTML é montado por nós):
 
 ```bash
 curl -X POST https://seu-dominio/api/pdf/generate \
   -H "Content-Type: application/json" \
-  -d '{"html": "<html>...</html>", "filename": "plano-alimentar-alex-neto"}'
+  -d '{
+    "nome": "Alex Neto", "idade": 29, "altura_cm": 160, "peso_kg": 76,
+    "genero": "Masculino", "objetivo": "emagrecer e definir",
+    "rotina": "horário livre", "nivel_atividade": "musculação 6x/semana",
+    "horario_acorda": "07:00", "horario_dorme": "23:00", "quantidade_refeicoes": 4,
+    "proteinas_preferidas": ["Frango", "Whey"], "proteinas_que_nao_gosta": [],
+    "carboidratos_preferidos": ["Arroz"], "carboidratos_que_nao_gosta": [],
+    "gorduras_preferidas": ["Azeite"], "gorduras_que_nao_gosta": [],
+    "bebidas_preferidas": [], "alimentos_indispensaveis": [], "alimentos_que_recusa": [],
+    "restricoes_alimentares": [], "alergias": [], "observacoes": ""
+  }'
 ```
 
-**2. HTML puro no corpo** (útil quando quem chama é a saída direta de uma IA, sem montar JSON):
+O mesmo JSON pode vir **Base64-encoded** direto no corpo (sem wrapper, sem content-type especial) — é o formato usado pelo node de integração do Leona, já que sobrevive à sanitização de caracteres:
 
 ```bash
-curl -X POST "https://seu-dominio/api/pdf/generate?filename=plano-alimentar-alex-neto" \
+BASE64=$(node -e "console.log(Buffer.from(JSON.stringify({nome:'Alex Neto', idade:29, ...})).toString('base64'))")
+curl -X POST https://seu-dominio/api/pdf/generate --data-binary "$BASE64"
+```
+
+`filename` é opcional dentro do JSON; se ausente, usa `nome`. Também aceita `?filename=...` na query string.
+
+**2. HTML pronto** (modo legado/manual, útil para testes — `{"html": "...", "filename": "..."}` ou HTML cru no corpo):
+
+```bash
+curl -X POST "https://seu-dominio/api/pdf/generate?filename=teste" \
   --data-binary @plano.html
 ```
 
-Nesse caso o `filename` é opcional via query string (`?filename=...`). Se o corpo vier envolto em um bloco de código markdown (` ```html ... ``` `), o endpoint remove automaticamente antes de renderizar.
+Se o corpo vier envolto em um bloco de código markdown (` ```html ... ``` `), o endpoint remove automaticamente antes de renderizar.
 
-Resposta (ambos os formatos):
+Resposta (todos os formatos):
 
 ```json
-{ "success": true, "url": "https://.../storage/v1/object/public/pdfs/plano-alimentar-alex-neto-<uuid>.pdf" }
+{ "success": true, "url": "https://.../storage/v1/object/public/pdfs/alex-neto-<uuid>.pdf" }
 ```
-
-- HTML (obrigatório): documento completo a ser renderizado (máx. ~2MB).
-- `filename` (opcional): prefixo do nome do arquivo; um UUID é sempre anexado para evitar colisões.
 
 ## Cron Jobs
 
