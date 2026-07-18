@@ -1,3 +1,9 @@
+export interface RefeicaoData {
+  horario?: string;
+  nome?: string;
+  itens?: string[] | string;
+}
+
 export interface PlanoAlimentarData {
   nome?: string;
   idade?: number | string;
@@ -22,8 +28,10 @@ export interface PlanoAlimentarData {
   restricoes_alimentares?: string[] | string;
   alergias?: string[] | string;
   observacoes?: string;
+  /** Cardápio do dia, já normalizado (vindo de JSON com array `refeicoes` ou dos campos planos `refeicao_N_*`). */
+  refeicoes?: RefeicaoData[];
   filename?: string;
 }
 
-/** Campo que, se presente numa string decodificada, indica que é dados estruturados (não HTML nem outro payload). */
-export const PLANO_ALIMENTAR_MARKER_FIELD = 'nome';
+/** Número máximo de refeições suportado no formato plano "refeicao_N_*" (chave: valor). */
+export const MAX_REFEICOES = 6;

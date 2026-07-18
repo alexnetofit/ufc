@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { generatePdfFromHtml } from '@/lib/pdf/generate';
 import { uploadPdf } from '@/lib/pdf/storage';
 import { renderPlanoAlimentarHtml } from '@/lib/pdf/plano-alimentar-template';
-import { PlanoAlimentarData } from '@/lib/pdf/plano-alimentar-types';
+import { MAX_REFEICOES, PlanoAlimentarData, RefeicaoData } from '@/lib/pdf/plano-alimentar-types';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -83,6 +83,27 @@ function parseKeyValueLines(text: string): Record<string, string> | null {
   return recognizedKeys >= 3 ? result : null;
 }
 
+// No formato "chave: valor" o cardápio chega em campos planos "refeicao_N_horario/nome/itens"
+// (1 a MAX_REFEICOES), já que esse formato não suporta listas aninhadas.
+function extractRefeicoesFromFlatFields(obj: Record<string, unknown>): RefeicaoData[] {
+  const refeicoes: RefeicaoData[] = [];
+
+  for (let i = 1; i <= MAX_REFEICOES; i++) {
+    const nome = obj[`refeicao_${i}_nome`];
+    if (typeof nome !== 'string' || nome.trim().length === 0) continue;
+
+    const horario = obj[`refeicao_${i}_horario`];
+    const itens = obj[`refeicao_${i}_itens`];
+    refeicoes.push({
+      nome,
+      horario: typeof horario === 'string' ? horario : undefined,
+      itens: typeof itens === 'string' ? itens : undefined,
+    });
+  }
+
+  return refeicoes;
+}
+
 function extractPayload(rawBody: string, queryFilename: string | undefined): ExtractedPayload {
   const candidate = stripMarkdownCodeFence(decodeIfBase64(rawBody));
 
@@ -107,6 +128,12 @@ function extractPayload(rawBody: string, queryFilename: string | undefined): Ext
 
     // Dados estruturados do plano alimentar — o HTML é montado por nós, não pela IA
     const data = obj as PlanoAlimentarData;
+    if (!Array.isArray(data.refeicoes)) {
+      const refeicoes = extractRefeicoesFromFlatFields(obj);
+      if (refeicoes.length > 0) {
+        data.refeicoes = refeicoes;
+      }
+    }
     const filename =
       (typeof data.filename === 'string' && data.filename) ||
       (typeof data.nome === 'string' && data.nome) ||
