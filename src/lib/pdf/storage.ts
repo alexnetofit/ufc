@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
-const PDFS_BUCKET = 'pdfs';
+export const PDFS_BUCKET = 'pdfs';
 
 // Remove marcas diacriticas (acentos) apos normalizacao NFD, sem depender de
 // caracteres unicode literais no source (faixa U+0300-U+036F).
@@ -17,20 +17,26 @@ function sanitizeFilename(name: string): string {
     .toLowerCase();
 }
 
+export interface UploadedPdf {
+  url: string;
+  path: string;
+}
+
 /**
- * Faz upload de um PDF para o Supabase Storage e retorna a URL pública.
+ * Faz upload de um PDF para o Supabase Storage e retorna a URL pública e o caminho
+ * do arquivo (o caminho é usado depois pela limpeza automática de 12h).
  */
-export async function uploadPdf(
+export async function uploadPdfReturningPath(
   supabase: SupabaseClient,
   pdfBuffer: Buffer,
   filenameHint?: string
-): Promise<string> {
+): Promise<UploadedPdf> {
   const base = filenameHint ? sanitizeFilename(filenameHint) : 'documento';
-  const filePath = `${base}-${randomUUID()}.pdf`;
+  const path = `${base}-${randomUUID()}.pdf`;
 
   const { error } = await supabase.storage
     .from(PDFS_BUCKET)
-    .upload(filePath, pdfBuffer, {
+    .upload(path, pdfBuffer, {
       contentType: 'application/pdf',
       upsert: false,
     });
@@ -41,7 +47,35 @@ export async function uploadPdf(
 
   const { data: { publicUrl } } = supabase.storage
     .from(PDFS_BUCKET)
-    .getPublicUrl(filePath);
+    .getPublicUrl(path);
 
-  return publicUrl;
+  return { url: publicUrl, path };
+}
+
+/**
+ * Faz upload de um PDF e retorna apenas a URL pública (compatibilidade).
+ */
+export async function uploadPdf(
+  supabase: SupabaseClient,
+  pdfBuffer: Buffer,
+  filenameHint?: string
+): Promise<string> {
+  const { url } = await uploadPdfReturningPath(supabase, pdfBuffer, filenameHint);
+  return url;
+}
+
+/**
+ * Remove arquivos do bucket de PDFs pelos seus caminhos. Usado pela limpeza de 12h.
+ */
+export async function deletePdfFiles(
+  supabase: SupabaseClient,
+  paths: string[]
+): Promise<void> {
+  const valid = paths.filter((p) => typeof p === 'string' && p.length > 0);
+  if (valid.length === 0) return;
+
+  const { error } = await supabase.storage.from(PDFS_BUCKET).remove(valid);
+  if (error) {
+    throw new Error(`Erro ao remover arquivos do Storage: ${error.message}`);
+  }
 }

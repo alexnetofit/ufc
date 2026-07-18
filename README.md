@@ -74,59 +74,64 @@ npm run dev
 
 Acesse: http://localhost:3000
 
-## Geração de PDF
+## Geração de PDF (assíncrona, com imagens por IA)
 
-Endpoint que recebe os dados de uma consulta nutricional, monta o HTML do plano alimentar **no próprio backend** (template em `src/lib/pdf/plano-alimentar-template.ts`) e hospeda o PDF resultante no Supabase Storage. A geração do visual não depende de uma IA externa produzir HTML — a IA (Leona ou qualquer outro sistema) só precisa mandar os dados coletados.
+Gera um PDF premium do plano alimentar em **2 páginas 16:9**: uma capa (nome, dados, objetivo e macros calculados) e uma página de cardápio, ambas com imagens de comida geradas pela OpenAI (gpt-image-1) como fundo e o texto real sobreposto por cima (dados sempre precisos). O visual é montado no backend — a IA do Leona só manda os dados coletados.
 
-Requer o bucket `pdfs` (público) criado no Supabase — ver `supabase/migrations/008_pdfs_bucket.sql`.
+Requer:
+- Bucket `pdfs` (público) no Supabase — ver `supabase/migrations/008_pdfs_bucket.sql`.
+- Tabela `pdf_jobs` (migration `create_pdf_jobs_table`).
+- Env var `OPENAI_API_KEY` na Vercel (opcional `OPENAI_IMAGE_MODEL`, padrão `gpt-image-1`, e `OPENAI_IMAGE_QUALITY`, padrão `high`). Sem a chave, o PDF é gerado com fundo em gradiente.
 
-**Endpoint aberto, sem autenticação** (decisão consciente para simplificar a integração com ferramentas low-code como o Leona — qualquer um com a URL pode gerar PDFs).
+**Endpoint aberto, sem autenticação** (decisão consciente para integração low-code).
 
-**Motivo do Base64**: ferramentas low-code (Leona) costumam remover `<`, `>` e `"` do texto de uma IA antes de repassá-lo (proteção contra HTML/JS em mensagens de chat), o que corrompe tanto HTML quanto JSON cru. Por isso o corpo pode vir em Base64 (alfabeto sem esses caracteres) — o endpoint decodifica automaticamente antes de interpretar.
+### Fluxo assíncrono
 
-O endpoint detecta sozinho o formato do corpo — não precisa declarar qual:
+O processamento (gerar imagens + renderizar) leva alguns segundos, então é assíncrono:
 
-**1. Dados estruturados do plano alimentar** (o uso principal — o HTML é montado por nós):
-
-```bash
-curl -X POST https://seu-dominio/api/pdf/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nome": "Alex Neto", "idade": 29, "altura_cm": 160, "peso_kg": 76,
-    "genero": "Masculino", "objetivo": "emagrecer e definir",
-    "rotina": "horário livre", "nivel_atividade": "musculação 6x/semana",
-    "horario_acorda": "07:00", "horario_dorme": "23:00", "quantidade_refeicoes": 4,
-    "proteinas_preferidas": ["Frango", "Whey"], "proteinas_que_nao_gosta": [],
-    "carboidratos_preferidos": ["Arroz"], "carboidratos_que_nao_gosta": [],
-    "gorduras_preferidas": ["Azeite"], "gorduras_que_nao_gosta": [],
-    "bebidas_preferidas": [], "alimentos_indispensaveis": [], "alimentos_que_recusa": [],
-    "restricoes_alimentares": [], "alergias": [], "observacoes": ""
-  }'
-```
-
-O mesmo JSON pode vir **Base64-encoded** direto no corpo (sem wrapper, sem content-type especial) — é o formato usado pelo node de integração do Leona, já que sobrevive à sanitização de caracteres:
-
-```bash
-BASE64=$(node -e "console.log(Buffer.from(JSON.stringify({nome:'Alex Neto', idade:29, ...})).toString('base64'))")
-curl -X POST https://seu-dominio/api/pdf/generate --data-binary "$BASE64"
-```
-
-`filename` é opcional dentro do JSON; se ausente, usa `nome`. Também aceita `?filename=...` na query string.
-
-**2. HTML pronto** (modo legado/manual, útil para testes — `{"html": "...", "filename": "..."}` ou HTML cru no corpo):
-
-```bash
-curl -X POST "https://seu-dominio/api/pdf/generate?filename=teste" \
-  --data-binary @plano.html
-```
-
-Se o corpo vier envolto em um bloco de código markdown (` ```html ... ``` `), o endpoint remove automaticamente antes de renderizar.
-
-Resposta (todos os formatos):
+**1. POST `/api/pdf/generate`** — cria o job e retorna o ID na hora (HTTP 202):
 
 ```json
-{ "success": true, "url": "https://.../storage/v1/object/public/pdfs/alex-neto-<uuid>.pdf" }
+{ "success": true, "id": "<uuid>", "status": "pending" }
 ```
+
+**2. GET `/api/pdf/status/{id}`** — o integrador faz polling a cada ~30s:
+
+```json
+{ "success": true, "id": "<uuid>", "status": "completed", "url": "https://.../pdfs/alex-neto-<uuid>.pdf", "error": null }
+```
+
+`status`: `pending` → `processing` → `completed` (com `url`) ou `failed` (com `error`).
+
+### Formato do corpo do POST
+
+Detectado automaticamente. Aceita JSON, o mesmo JSON em **Base64**, ou o formato **`chave: valor`** (uma por linha) — este último é o usado pelo Leona, pois sobrevive à sanitização de `<`, `>`, `"`. Campos:
+
+```
+nome, idade, altura_cm, peso_kg, genero, objetivo, rotina, nivel_atividade,
+horario_acorda, horario_dorme, quantidade_refeicoes, proteinas_preferidas,
+proteinas_que_nao_gosta, carboidratos_preferidos, carboidratos_que_nao_gosta,
+gorduras_preferidas, gorduras_que_nao_gosta, bebidas_preferidas,
+alimentos_indispensaveis, alimentos_que_recusa, restricoes_alimentares,
+alergias, observacoes
+```
+
+Cardápio (campos planos, 1 a 6): `refeicao_N_horario`, `refeicao_N_nome`, `refeicao_N_itens` (itens separados por vírgula). Em JSON, também aceita um array `refeicoes: [{ horario, nome, itens }]`.
+
+As **calorias e macros** (proteína/carbo/gordura) são calculadas no backend (Mifflin-St Jeor + TDEE + distribuição por objetivo) a partir de idade/peso/altura/gênero/atividade — não precisa mandar.
+
+Exemplo (`chave: valor`, como o Leona envia):
+
+```bash
+curl -X POST https://app.sigmaufc.com/api/pdf/generate --data-binary $'nome: Alex Neto\nidade: 29\naltura_cm: 160\npeso_kg: 76\ngenero: Masculino\nobjetivo: emagrecer e definir\n...'
+# -> { "id": "...", "status": "pending" }
+curl https://app.sigmaufc.com/api/pdf/status/<id>
+# -> { "status": "completed", "url": "https://.../pdfs/....pdf" }
+```
+
+### Limpeza automática
+
+Um cron horário (`/api/cron/cleanup-pdfs`) remove jobs e arquivos (PDFs) com mais de **12h** do Storage e da tabela `pdf_jobs`.
 
 ## Cron Jobs
 
