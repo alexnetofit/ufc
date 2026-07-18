@@ -111,13 +111,20 @@ function describeMeal(meal: RefeicaoData): string {
 }
 
 /**
- * Foto individual de UMA refeição, para o card. Prato único, top-down, sem texto.
+ * UMA única imagem contendo TODAS as refeições do dia como pratos separados, lado a lado
+ * (estilo colagem/grid de fotografia gastronômica). Sem texto — a lista real das refeições
+ * é sobreposta por HTML.
  */
-export async function generateMealImage(meal: RefeicaoData): Promise<string> {
-  const desc = describeMeal(meal);
-  const prompt = `Professional top-down food photography of a single healthy meal: ${desc}.
-One plate or bowl, centered, appetizing and fresh, soft natural daylight, clean light background,
-editorial magazine quality, ultra realistic, high detail.
+export async function generateMealsImage(refeicoes: RefeicaoData[]): Promise<string> {
+  const pratos = refeicoes
+    .map((m, i) => `${i + 1}) ${describeMeal(m)}`)
+    .join('; ');
+  const n = refeicoes.length || 4;
+  const prompt = `Professional food photography: a clean, evenly-spaced grid collage of ${n} separate healthy meals,
+each on its own plate or bowl, top-down view, arranged in a neat layout on a bright modern surface.
+The ${n} distinct meals of the day are: ${pratos}.
+Each dish clearly separated with generous clean space between them, soft natural daylight,
+appetizing and fresh, editorial magazine quality, ultra realistic, high detail, consistent styling across all plates.
 No text, no words, no letters, no numbers, no labels anywhere in the image.`;
   return generateImage(prompt, '1024x1024', MEAL_QUALITY);
 }

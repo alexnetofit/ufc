@@ -40,7 +40,7 @@ export function filterRefeicoesValidas(refeicoes: RefeicaoData[] | undefined): R
 
 export interface PremiumRenderOptions {
   coverImage?: string; // data URI ou URL
-  mealImages?: (string | undefined)[]; // alinhado a filterRefeicoesValidas(data.refeicoes)
+  mealsImage?: string; // uma única imagem com todas as refeições
   macros?: MacrosCalculados | null;
 }
 
@@ -99,7 +99,7 @@ ${renderMacroBar(m)}
 </div>`;
 }
 
-function renderMealCards(refeicoes: RefeicaoData[] | undefined, mealImages?: (string | undefined)[]): string {
+function renderMealCards(refeicoes: RefeicaoData[] | undefined): string {
   const validas = filterRefeicoesValidas(refeicoes);
 
   if (validas.length === 0) {
@@ -107,18 +107,12 @@ function renderMealCards(refeicoes: RefeicaoData[] | undefined, mealImages?: (st
   }
 
   return validas
-    .map((r, i) => {
+    .map((r) => {
       const nome = toText(r.nome, 'Refeição');
       const horario = (r.horario ?? '').toString().trim();
       const itens = toArray(r.itens);
       const accent = mealAccent(r.nome ?? '');
-      const img = mealImages?.[i];
-      const photo = img
-        ? `<div class="meal-photo" style="background-image:url('${img}')"></div>`
-        : `<div class="meal-photo meal-photo-fallback" style="background:color-mix(in srgb, ${accent} 16%, #ffffff)"><span style="color:${accent}">${mealIcon(r.nome ?? '')}</span></div>`;
       return `<div class="meal-card" style="--accent:${accent}">
-${photo}
-<div class="meal-body">
 <div class="meal-head">
 <span class="meal-ic">${mealIcon(r.nome ?? '')}</span>
 <div>
@@ -127,7 +121,6 @@ ${horario ? `<div class="meal-time">${icon('clock', 12)} ${escapeHtml(horario)}<
 </div>
 </div>
 ${itens.length > 0 ? `<ul class="meal-items">${itens.map((it) => `<li>${escapeHtml(it)}</li>`).join('')}</ul>` : ''}
-</div>
 </div>`;
     })
     .join('');
@@ -142,11 +135,15 @@ export function renderPlanoPremiumHtml(data: PlanoAlimentarData, opts: PremiumRe
   const peso = toNumberText(data.peso_kg, ' kg');
   const geradoEm = formatGeneratedDate();
   const mealCount = filterRefeicoesValidas(data.refeicoes).length;
-  const gridCols = mealCount <= 2 ? 1 : mealCount <= 4 ? 2 : 3;
+  const gridCols = mealCount <= 3 ? 1 : 2;
 
   const coverBg = opts.coverImage
     ? `background-image:linear-gradient(90deg, rgba(10,12,20,0.92) 0%, rgba(10,12,20,0.72) 40%, rgba(10,12,20,0.30) 100%), url('${opts.coverImage}');`
     : `background-image:linear-gradient(120deg, #1f2a4a 0%, #3a2a6b 60%, #7a3a6b 130%);`;
+
+  const mealsBg = opts.mealsImage
+    ? `background-image:linear-gradient(180deg, rgba(10,12,20,0.10), rgba(10,12,20,0.45)), url('${opts.mealsImage}');`
+    : `background-image:linear-gradient(160deg, #1baf7a 0%, #2a78d6 120%);`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -193,20 +190,19 @@ padding:64px 72px;
 .cover-foot{ font-size:12.5px; color:rgba(255,255,255,0.6); }
 
 /* ---------- REFEIÇÕES ---------- */
-.meals{ padding:44px 52px; display:flex; flex-direction:column; height:720px; }
-.meals-header{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; }
-.meals-header h2{ font-size:30px; font-weight:800; letter-spacing:-0.02em; }
-.meals-header .hsub{ color:var(--muted); font-size:14px; }
-.meal-grid{ margin-top:22px; flex:1; display:grid; gap:16px; align-content:start; }
+.meals{ display:flex; height:720px; }
+.meals-visual{ width:42%; height:720px; ${mealsBg} background-size:cover; background-position:center; position:relative; }
+.meals-visual .vlabel{ position:absolute; left:40px; bottom:40px; right:32px; color:#fff; }
+.meals-visual .vtitle{ font-size:30px; font-weight:800; line-height:1.08; letter-spacing:-0.02em; text-shadow:0 2px 12px rgba(0,0,0,0.35); }
+.meals-visual .vsub{ margin-top:8px; font-size:13.5px; color:rgba(255,255,255,0.9); text-shadow:0 1px 8px rgba(0,0,0,0.4); }
+.meals-body{ width:58%; height:720px; padding:44px 48px; display:flex; flex-direction:column; }
+.meals-header h2{ font-size:28px; font-weight:800; letter-spacing:-0.02em; }
+.meals-header .hsub{ color:var(--muted); font-size:13.5px; margin-top:4px; }
+.meal-grid{ margin-top:20px; flex:1; display:grid; gap:12px; align-content:start; }
 .meal-grid.cols-1{ grid-template-columns:1fr; }
 .meal-grid.cols-2{ grid-template-columns:1fr 1fr; }
-.meal-grid.cols-3{ grid-template-columns:1fr 1fr 1fr; }
-.meal-card{ border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#ffffff; box-shadow:0 4px 14px rgba(15,23,42,0.05); display:flex; flex-direction:column; }
-.meal-photo{ width:100%; height:132px; background-size:cover; background-position:center; border-bottom:3px solid var(--accent); }
-.meal-photo-fallback{ display:flex; align-items:center; justify-content:center; }
-.meal-photo-fallback span svg{ width:40px; height:40px; }
-.meal-body{ padding:13px 15px 15px; }
-.meal-head{ display:flex; align-items:center; gap:9px; margin-bottom:7px; }
+.meal-card{ border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:14px; padding:13px 15px; background:#fcfcfd; }
+.meal-head{ display:flex; align-items:center; gap:9px; margin-bottom:6px; }
 .meal-ic{ width:30px; height:30px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--accent) 14%, #ffffff); color:var(--accent); }
 .meal-name{ font-size:14.5px; font-weight:700; color:#111827; }
 .meal-time{ display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-top:1px; }
@@ -238,17 +234,22 @@ ${renderMacros(opts.macros)}
 </div>
 
 <div class="page meals">
+<div class="meals-visual">
+<div class="vlabel">
+<div class="vtitle">Seu cardápio<br>do dia</div>
+<div class="vsub">Refeições pensadas a partir das suas preferências e rotina.</div>
+</div>
+</div>
+<div class="meals-body">
 <div class="meals-header">
-<div>
 <h2>Cardápio sugerido</h2>
 <div class="hsub">Distribuição das refeições ao longo do dia${data.nome ? ` para ${nome}` : ''}.</div>
 </div>
-<span class="gerado" style="color:var(--muted)">${icon('calendar', 13)} ${geradoEm}</span>
-</div>
 <div class="meal-grid cols-${gridCols}">
-${renderMealCards(data.refeicoes, opts.mealImages)}
+${renderMealCards(data.refeicoes)}
 </div>
-<div class="meals-foot">Plano baseado exclusivamente nas informações fornecidas na consulta.</div>
+<div class="meals-foot">Gerado em ${geradoEm} • baseado exclusivamente nas informações fornecidas na consulta.</div>
+</div>
 </div>
 
 </body>
