@@ -31,13 +31,19 @@ function formatGeneratedDate(): string {
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
 }
 
+/** Lista de refeições válidas (com nome ou itens). Compartilhada com o process-job para alinhar as imagens. */
+export function filterRefeicoesValidas(refeicoes: RefeicaoData[] | undefined): RefeicaoData[] {
+  return (refeicoes ?? []).filter(
+    (r) => (r.nome && r.nome.trim()) || (r.itens && toArray(r.itens).length > 0)
+  );
+}
+
 export interface PremiumRenderOptions {
   coverImage?: string; // data URI ou URL
-  mealsImage?: string;
+  mealImages?: (string | undefined)[]; // alinhado a filterRefeicoesValidas(data.refeicoes)
   macros?: MacrosCalculados | null;
 }
 
-// Cor fixa por tipo de refeição (paleta validada para contraste/daltonismo).
 function mealAccent(nome: string): string {
   const n = nome.toLowerCase();
   if (n.includes('café') || n.includes('cafe') || (n.includes('manhã') && !n.includes('lanche'))) return '#eda100';
@@ -93,22 +99,26 @@ ${renderMacroBar(m)}
 </div>`;
 }
 
-function renderMealCards(refeicoes: RefeicaoData[] | undefined): string {
-  const validas = (refeicoes ?? []).filter(
-    (r) => (r.nome && r.nome.trim()) || (r.itens && toArray(r.itens).length > 0)
-  );
+function renderMealCards(refeicoes: RefeicaoData[] | undefined, mealImages?: (string | undefined)[]): string {
+  const validas = filterRefeicoesValidas(refeicoes);
 
   if (validas.length === 0) {
     return `<p class="empty-meals">Cardápio não gerado para esta consulta.</p>`;
   }
 
   return validas
-    .map((r) => {
+    .map((r, i) => {
       const nome = toText(r.nome, 'Refeição');
       const horario = (r.horario ?? '').toString().trim();
       const itens = toArray(r.itens);
       const accent = mealAccent(r.nome ?? '');
+      const img = mealImages?.[i];
+      const photo = img
+        ? `<div class="meal-photo" style="background-image:url('${img}')"></div>`
+        : `<div class="meal-photo meal-photo-fallback" style="background:color-mix(in srgb, ${accent} 16%, #ffffff)"><span style="color:${accent}">${mealIcon(r.nome ?? '')}</span></div>`;
       return `<div class="meal-card" style="--accent:${accent}">
+${photo}
+<div class="meal-body">
 <div class="meal-head">
 <span class="meal-ic">${mealIcon(r.nome ?? '')}</span>
 <div>
@@ -116,7 +126,8 @@ function renderMealCards(refeicoes: RefeicaoData[] | undefined): string {
 ${horario ? `<div class="meal-time">${icon('clock', 12)} ${escapeHtml(horario)}</div>` : ''}
 </div>
 </div>
-${itens.length > 0 ? `<ul class="meal-items">${itens.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
+${itens.length > 0 ? `<ul class="meal-items">${itens.map((it) => `<li>${escapeHtml(it)}</li>`).join('')}</ul>` : ''}
+</div>
 </div>`;
     })
     .join('');
@@ -130,15 +141,12 @@ export function renderPlanoPremiumHtml(data: PlanoAlimentarData, opts: PremiumRe
   const altura = toNumberText(data.altura_cm, ' cm');
   const peso = toNumberText(data.peso_kg, ' kg');
   const geradoEm = formatGeneratedDate();
-  const mealCount = (data.refeicoes ?? []).filter((r) => (r.nome && r.nome.trim()) || (r.itens && toArray(r.itens).length > 0)).length;
+  const mealCount = filterRefeicoesValidas(data.refeicoes).length;
+  const gridCols = mealCount <= 2 ? 1 : mealCount <= 4 ? 2 : 3;
 
   const coverBg = opts.coverImage
     ? `background-image:linear-gradient(90deg, rgba(10,12,20,0.92) 0%, rgba(10,12,20,0.72) 40%, rgba(10,12,20,0.30) 100%), url('${opts.coverImage}');`
     : `background-image:linear-gradient(120deg, #1f2a4a 0%, #3a2a6b 60%, #7a3a6b 130%);`;
-
-  const mealsBg = opts.mealsImage
-    ? `background-image:linear-gradient(180deg, rgba(10,12,20,0.20), rgba(10,12,20,0.55)), url('${opts.mealsImage}');`
-    : `background-image:linear-gradient(160deg, #1baf7a 0%, #2a78d6 120%);`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -150,10 +158,7 @@ export function renderPlanoPremiumHtml(data: PlanoAlimentarData, opts: PremiumRe
 :root{ --ink:#0b0b0b; --muted:#6b7280; --line:#e6e9f2; }
 @page { size: 1280px 720px; margin: 0; }
 html,body{ font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color:var(--ink); }
-.page{
-width:1280px; height:720px; position:relative; overflow:hidden;
-background:#ffffff;
-}
+.page{ width:1280px; height:720px; position:relative; overflow:hidden; background:#ffffff; }
 .page + .page{ page-break-before: always; }
 
 /* ---------- CAPA ---------- */
@@ -165,30 +170,17 @@ display:flex; flex-direction:column; justify-content:space-between;
 padding:64px 72px;
 }
 .cover-top{ display:flex; justify-content:space-between; align-items:center; }
-.eyebrow{
-display:inline-flex; align-items:center; gap:8px;
-font-size:13px; letter-spacing:.22em; text-transform:uppercase; font-weight:700;
-color:rgba(255,255,255,0.9);
-}
+.eyebrow{ display:inline-flex; align-items:center; gap:8px; font-size:13px; letter-spacing:.22em; text-transform:uppercase; font-weight:700; color:rgba(255,255,255,0.9); }
 .gerado{ font-size:13px; color:rgba(255,255,255,0.75); display:inline-flex; align-items:center; gap:7px; }
 .cover-main{ max-width:760px; }
 .cover h1{ font-size:64px; line-height:1.02; letter-spacing:-0.03em; font-weight:800; }
-.cover .subtitle{ margin-top:14px; font-size:22px; font-weight:500; color:rgba(255,255,255,0.88); }
+.cover .subtitle{ margin-top:14px; font-size:22px; font-weight:500; color:rgba(255,255,255,0.88); display:flex; align-items:center; gap:8px; }
 .chips{ margin-top:26px; display:flex; gap:12px; flex-wrap:wrap; }
-.chip{
-display:inline-flex; align-items:center; gap:9px;
-padding:11px 18px; border-radius:14px;
-background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.18);
-font-size:15px; font-weight:600;
-}
+.chip{ display:inline-flex; align-items:center; gap:9px; padding:11px 18px; border-radius:14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.18); font-size:15px; font-weight:600; }
 .chip .chip-label{ color:rgba(255,255,255,0.7); font-weight:500; }
-/* macros */
 .macros{ margin-top:30px; max-width:720px; }
 .macro-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-.macro-tile{
-background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.16);
-border-radius:16px; padding:16px 18px;
-}
+.macro-tile{ background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:16px 18px; }
 .macro-tile.macro-cal{ background:rgba(255,255,255,0.16); }
 .macro-val{ font-size:30px; font-weight:800; line-height:1; }
 .macro-val small{ font-size:15px; font-weight:700; opacity:.8; margin-left:1px; }
@@ -201,42 +193,27 @@ border-radius:16px; padding:16px 18px;
 .cover-foot{ font-size:12.5px; color:rgba(255,255,255,0.6); }
 
 /* ---------- REFEIÇÕES ---------- */
-.meals{ display:flex; }
-.meals-visual{
-width:40%; height:720px;
-${mealsBg}
-background-size:cover; background-position:center;
-position:relative;
-}
-.meals-visual .vlabel{
-position:absolute; left:40px; bottom:44px; color:#fff;
-}
-.meals-visual .vlabel .vtitle{ font-size:30px; font-weight:800; line-height:1.1; letter-spacing:-0.02em; }
-.meals-visual .vlabel .vsub{ margin-top:8px; font-size:14px; color:rgba(255,255,255,0.85); max-width:340px; }
-.meals-body{ width:60%; height:720px; padding:48px 52px; display:flex; flex-direction:column; }
-.meals-body h2{ font-size:30px; font-weight:800; letter-spacing:-0.02em; }
-.meals-body .h2sub{ margin-top:6px; color:var(--muted); font-size:14px; }
-.meal-grid{
-margin-top:22px; flex:1;
-display:grid; grid-template-columns:1fr 1fr; gap:14px; align-content:start;
-}
-.meal-grid.few{ grid-template-columns:1fr; }
-.meal-card{
-border:1px solid var(--line); border-left:4px solid var(--accent);
-border-radius:14px; padding:14px 16px; background:#fcfcfd;
-}
-.meal-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-.meal-ic{
-width:34px; height:34px; border-radius:10px; flex-shrink:0;
-display:flex; align-items:center; justify-content:center;
-background:color-mix(in srgb, var(--accent) 14%, #ffffff); color:var(--accent);
-}
-.meal-name{ font-size:15.5px; font-weight:700; color:#111827; }
-.meal-time{ display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); margin-top:2px; }
-.meal-items{ margin:0; padding-left:17px; }
-.meal-items li{ font-size:13px; color:#374151; margin:2px 0; }
+.meals{ padding:44px 52px; display:flex; flex-direction:column; height:720px; }
+.meals-header{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; }
+.meals-header h2{ font-size:30px; font-weight:800; letter-spacing:-0.02em; }
+.meals-header .hsub{ color:var(--muted); font-size:14px; }
+.meal-grid{ margin-top:22px; flex:1; display:grid; gap:16px; align-content:start; }
+.meal-grid.cols-1{ grid-template-columns:1fr; }
+.meal-grid.cols-2{ grid-template-columns:1fr 1fr; }
+.meal-grid.cols-3{ grid-template-columns:1fr 1fr 1fr; }
+.meal-card{ border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#ffffff; box-shadow:0 4px 14px rgba(15,23,42,0.05); display:flex; flex-direction:column; }
+.meal-photo{ width:100%; height:132px; background-size:cover; background-position:center; border-bottom:3px solid var(--accent); }
+.meal-photo-fallback{ display:flex; align-items:center; justify-content:center; }
+.meal-photo-fallback span svg{ width:40px; height:40px; }
+.meal-body{ padding:13px 15px 15px; }
+.meal-head{ display:flex; align-items:center; gap:9px; margin-bottom:7px; }
+.meal-ic{ width:30px; height:30px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--accent) 14%, #ffffff); color:var(--accent); }
+.meal-name{ font-size:14.5px; font-weight:700; color:#111827; }
+.meal-time{ display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-top:1px; }
+.meal-items{ margin:0; padding-left:16px; }
+.meal-items li{ font-size:12.5px; color:#374151; margin:2px 0; }
 .empty-meals{ color:var(--muted); font-size:15px; margin-top:20px; }
-.meals-foot{ margin-top:16px; font-size:11.5px; color:var(--muted); }
+.meals-foot{ margin-top:14px; font-size:11.5px; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -261,20 +238,17 @@ ${renderMacros(opts.macros)}
 </div>
 
 <div class="page meals">
-<div class="meals-visual">
-<div class="vlabel">
-<div class="vtitle">Seu cardápio<br>do dia</div>
-<div class="vsub">Sugestão de refeições alinhada às suas preferências e rotina.</div>
-</div>
-</div>
-<div class="meals-body">
+<div class="meals-header">
+<div>
 <h2>Cardápio sugerido</h2>
-<div class="h2sub">Distribuição das refeições ao longo do dia${data.nome ? ` para ${nome}` : ''}.</div>
-<div class="meal-grid ${mealCount <= 2 ? 'few' : ''}">
-${renderMealCards(data.refeicoes)}
+<div class="hsub">Distribuição das refeições ao longo do dia${data.nome ? ` para ${nome}` : ''}.</div>
 </div>
-<div class="meals-foot">Plano gerado em ${geradoEm} • baseado exclusivamente nas informações fornecidas na consulta.</div>
+<span class="gerado" style="color:var(--muted)">${icon('calendar', 13)} ${geradoEm}</span>
 </div>
+<div class="meal-grid cols-${gridCols}">
+${renderMealCards(data.refeicoes, opts.mealImages)}
+</div>
+<div class="meals-foot">Plano baseado exclusivamente nas informações fornecidas na consulta.</div>
 </div>
 
 </body>

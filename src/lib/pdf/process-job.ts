@@ -1,8 +1,8 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { ParsedPayload } from './parse-payload';
 import { calcularMacros } from './macros';
-import { generateCoverImage, generateMealsImage } from './openai-image';
-import { renderPlanoPremiumHtml } from './plano-premium-template';
+import { generateCoverImage, generateMealImage } from './openai-image';
+import { renderPlanoPremiumHtml, filterRefeicoesValidas } from './plano-premium-template';
 import { generatePdfFromHtml } from './generate';
 import { uploadPdfReturningPath } from './storage';
 import { updateJob } from './jobs';
@@ -31,26 +31,30 @@ export async function processJob(
       const macros = calcularMacros(data);
 
       let coverImage: string | undefined;
-      let mealsImage: string | undefined;
+      let mealImages: (string | undefined)[] | undefined;
 
       if (process.env.OPENAI_API_KEY) {
-        const [cover, meals] = await Promise.all([
+        const validas = filterRefeicoesValidas(data.refeicoes);
+        // Capa + uma foto por refeição, tudo em paralelo. Falhas individuais viram fallback.
+        const [cover, ...meals] = await Promise.all([
           generateCoverImage(data).catch((e) => {
             console.error(`[PDF][job ${jobId}] imagem de capa falhou:`, e?.message ?? e);
             return undefined;
           }),
-          generateMealsImage(data).catch((e) => {
-            console.error(`[PDF][job ${jobId}] imagem de refeições falhou:`, e?.message ?? e);
-            return undefined;
-          }),
+          ...validas.map((meal, i) =>
+            generateMealImage(meal).catch((e) => {
+              console.error(`[PDF][job ${jobId}] imagem da refeição ${i + 1} falhou:`, e?.message ?? e);
+              return undefined;
+            })
+          ),
         ]);
         coverImage = cover;
-        mealsImage = meals;
+        mealImages = meals;
       } else {
-        console.warn(`[PDF][job ${jobId}] OPENAI_API_KEY ausente — gerando PDF com fundo em gradiente.`);
+        console.warn(`[PDF][job ${jobId}] OPENAI_API_KEY ausente — gerando PDF sem imagens (fallback).`);
       }
 
-      const html = renderPlanoPremiumHtml(data, { coverImage, mealsImage, macros });
+      const html = renderPlanoPremiumHtml(data, { coverImage, mealImages, macros });
       pdfBuffer = await generatePdfFromHtml(html, { width: '1280px', height: '720px' });
     }
 
