@@ -60,9 +60,6 @@ RAPIDAPI_HOST=mmaapi.p.rapidapi.com
 
 # Cron Secret
 CRON_SECRET=um_secret_seguro_aqui
-
-# PDF Generation
-PDF_API_SECRET=um_secret_seguro_aqui
 ```
 
 ### 4. Configurar banco de dados
@@ -83,13 +80,14 @@ Endpoint genérico para renderizar um HTML em PDF e hospedá-lo no Supabase Stor
 
 Requer o bucket `pdfs` (público) criado no Supabase — ver `supabase/migrations/008_pdfs_bucket.sql`.
 
+**Endpoint aberto, sem autenticação** (decisão consciente para simplificar a integração com ferramentas low-code como o Leona — qualquer um com a URL pode gerar PDFs).
+
 O endpoint aceita o corpo da requisição em qualquer um destes formatos (não precisa escolher/declarar qual — ele detecta sozinho):
 
 **1. JSON** (`{"html": "...", "filename": "..."}`):
 
 ```bash
 curl -X POST https://seu-dominio/api/pdf/generate \
-  -H "Authorization: Bearer $PDF_API_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"html": "<html>...</html>", "filename": "plano-alimentar-alex-neto"}'
 ```
@@ -98,7 +96,6 @@ curl -X POST https://seu-dominio/api/pdf/generate \
 
 ```bash
 curl -X POST "https://seu-dominio/api/pdf/generate?filename=plano-alimentar-alex-neto" \
-  -H "Authorization: Bearer $PDF_API_SECRET" \
   --data-binary @plano.html
 ```
 

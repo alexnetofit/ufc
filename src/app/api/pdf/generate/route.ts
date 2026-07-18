@@ -56,24 +56,6 @@ function extractHtmlAndFilename(
 
 export async function POST(request: NextRequest) {
   try {
-    // Autenticação via secret estático (endpoint chamado por sistemas externos)
-    const apiSecret = process.env.PDF_API_SECRET;
-    if (!apiSecret) {
-      console.error('[PDF] PDF_API_SECRET não configurada');
-      return NextResponse.json(
-        { success: false, error: 'Endpoint não configurado' },
-        { status: 500 }
-      );
-    }
-
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${apiSecret}`) {
-      return NextResponse.json(
-        { success: false, error: 'Não autorizado' },
-        { status: 401 }
-      );
-    }
-
     const rawBody = await request.text();
     if (!rawBody || rawBody.trim().length === 0) {
       return NextResponse.json(
