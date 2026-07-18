@@ -54,6 +54,35 @@ interface ExtractedPayload {
   filename: string | undefined;
 }
 
+// Chaves reconhecidas do formato "chave: valor" (uma por linha) — usado como alternativa
+// ao JSON quando o texto vem de uma IA cujo pipeline remove aspas/colchetes (ex: Leona).
+const KEY_VALUE_FIELDS = [
+  'nome', 'idade', 'altura_cm', 'peso_kg', 'genero', 'objetivo', 'rotina',
+  'nivel_atividade', 'horario_acorda', 'horario_dorme', 'quantidade_refeicoes',
+  'proteinas_preferidas', 'proteinas_que_nao_gosta', 'carboidratos_preferidos',
+  'carboidratos_que_nao_gosta', 'gorduras_preferidas', 'gorduras_que_nao_gosta',
+  'bebidas_preferidas', 'alimentos_indispensaveis', 'alimentos_que_recusa',
+  'restricoes_alimentares', 'alergias', 'observacoes', 'filename',
+];
+
+function parseKeyValueLines(text: string): Record<string, string> | null {
+  const result: Record<string, string> = {};
+  let recognizedKeys = 0;
+
+  for (const line of text.split('\n')) {
+    const idx = line.indexOf(':');
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim();
+    if (!key) continue;
+    result[key] = value;
+    if (KEY_VALUE_FIELDS.includes(key)) recognizedKeys++;
+  }
+
+  // Só tratamos como esse formato se reconhecermos várias chaves esperadas
+  return recognizedKeys >= 3 ? result : null;
+}
+
 function extractPayload(rawBody: string, queryFilename: string | undefined): ExtractedPayload {
   const candidate = stripMarkdownCodeFence(decodeIfBase64(rawBody));
 
@@ -61,7 +90,11 @@ function extractPayload(rawBody: string, queryFilename: string | undefined): Ext
   try {
     parsed = JSON.parse(candidate);
   } catch {
-    // Não é JSON — segue como HTML cru
+    // Não é JSON — tenta o formato "chave: valor" abaixo, senão cai pra HTML cru
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    parsed = parseKeyValueLines(candidate);
   }
 
   if (parsed && typeof parsed === 'object') {
