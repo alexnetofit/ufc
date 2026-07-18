@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  outputFileTracingIncludes: {
+    '/api/pdf/generate': ['./node_modules/@sparticuz/chromium/bin/**/*'],
+  },
   images: {
     remotePatterns: [
       {
