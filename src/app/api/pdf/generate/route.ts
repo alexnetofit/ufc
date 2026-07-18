@@ -16,6 +16,44 @@ function getAdminClient() {
   );
 }
 
+// Remove um bloco de código markdown (```html ... ``` ou ``` ... ```) que
+// eventualmente envolva o HTML gerado por uma IA, mesmo quando instruída a não usar markdown.
+function stripMarkdownCodeFence(text: string): string {
+  const trimmed = text.trim();
+  const fenceMatch = trimmed.match(/^```(?:html)?\s*\n?([\s\S]*?)\n?```$/i);
+  return fenceMatch ? fenceMatch[1].trim() : trimmed;
+}
+
+// Aceita tanto { html, filename } em JSON quanto o HTML puro direto no corpo da requisição
+// (qualquer content-type), já que o consumidor desse endpoint costuma ser a saída de uma IA
+// que nem sempre chega perfeitamente encapsulada em JSON.
+function extractHtmlAndFilename(
+  rawBody: string,
+  queryFilename: string | undefined
+): { html: string; filename: string | undefined } {
+  let html: string | undefined;
+  let filename = queryFilename;
+
+  try {
+    const parsed = JSON.parse(rawBody);
+    if (parsed && typeof parsed === 'object' && typeof (parsed as Record<string, unknown>).html === 'string') {
+      html = (parsed as Record<string, unknown>).html as string;
+      const parsedFilename = (parsed as Record<string, unknown>).filename;
+      if (typeof parsedFilename === 'string') {
+        filename = parsedFilename;
+      }
+    }
+  } catch {
+    // Corpo não é um JSON válido — tratado como HTML cru abaixo
+  }
+
+  if (html === undefined) {
+    html = rawBody;
+  }
+
+  return { html: stripMarkdownCodeFence(html), filename };
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Autenticação via secret estático (endpoint chamado por sistemas externos)
@@ -36,36 +74,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
+    const rawBody = await request.text();
+    if (!rawBody || rawBody.trim().length === 0) {
       return NextResponse.json(
-        { success: false, error: 'JSON inválido no corpo da requisição' },
+        { success: false, error: 'Corpo da requisição vazio' },
         { status: 400 }
       );
     }
 
-    const { html, filename } = (body ?? {}) as { html?: unknown; filename?: unknown };
+    const queryFilename = request.nextUrl.searchParams.get('filename') ?? undefined;
+    const { html, filename } = extractHtmlAndFilename(rawBody, queryFilename);
 
-    if (typeof html !== 'string' || html.trim().length === 0) {
+    if (html.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Campo "html" é obrigatório e deve ser uma string' },
+        { success: false, error: 'Nenhum HTML encontrado no corpo da requisição' },
         { status: 400 }
       );
     }
 
     if (html.length > MAX_HTML_LENGTH) {
       return NextResponse.json(
-        { success: false, error: `Campo "html" excede o tamanho máximo de ${MAX_HTML_LENGTH} caracteres` },
-        { status: 400 }
-      );
-    }
-
-    if (filename !== undefined && typeof filename !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Campo "filename" deve ser uma string' },
+        { success: false, error: `O HTML excede o tamanho máximo de ${MAX_HTML_LENGTH} caracteres` },
         { status: 400 }
       );
     }
@@ -75,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // Upload para o Supabase Storage
     const supabase = getAdminClient();
-    const url = await uploadPdf(supabase, pdfBuffer, filename as string | undefined);
+    const url = await uploadPdf(supabase, pdfBuffer, filename);
 
     return NextResponse.json({ success: true, url });
   } catch (error) {

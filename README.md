@@ -83,6 +83,10 @@ Endpoint genérico para renderizar um HTML em PDF e hospedá-lo no Supabase Stor
 
 Requer o bucket `pdfs` (público) criado no Supabase — ver `supabase/migrations/008_pdfs_bucket.sql`.
 
+O endpoint aceita o corpo da requisição em qualquer um destes formatos (não precisa escolher/declarar qual — ele detecta sozinho):
+
+**1. JSON** (`{"html": "...", "filename": "..."}`):
+
 ```bash
 curl -X POST https://seu-dominio/api/pdf/generate \
   -H "Authorization: Bearer $PDF_API_SECRET" \
@@ -90,13 +94,23 @@ curl -X POST https://seu-dominio/api/pdf/generate \
   -d '{"html": "<html>...</html>", "filename": "plano-alimentar-alex-neto"}'
 ```
 
-Resposta:
+**2. HTML puro no corpo** (útil quando quem chama é a saída direta de uma IA, sem montar JSON):
+
+```bash
+curl -X POST "https://seu-dominio/api/pdf/generate?filename=plano-alimentar-alex-neto" \
+  -H "Authorization: Bearer $PDF_API_SECRET" \
+  --data-binary @plano.html
+```
+
+Nesse caso o `filename` é opcional via query string (`?filename=...`). Se o corpo vier envolto em um bloco de código markdown (` ```html ... ``` `), o endpoint remove automaticamente antes de renderizar.
+
+Resposta (ambos os formatos):
 
 ```json
 { "success": true, "url": "https://.../storage/v1/object/public/pdfs/plano-alimentar-alex-neto-<uuid>.pdf" }
 ```
 
-- `html` (obrigatório): documento HTML completo a ser renderizado (máx. ~2MB).
+- HTML (obrigatório): documento completo a ser renderizado (máx. ~2MB).
 - `filename` (opcional): prefixo do nome do arquivo; um UUID é sempre anexado para evitar colisões.
 
 ## Cron Jobs
