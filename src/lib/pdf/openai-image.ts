@@ -76,55 +76,55 @@ No text, no words, no letters, no numbers, no labels anywhere in the image.`;
   return generateImage(prompt, '1536x1024', COVER_QUALITY);
 }
 
-// Traduz palavras comuns de alimentos PT->EN para o prompt da imagem ficar mais preciso.
-const FOOD_HINTS: Array<[RegExp, string]> = [
-  [/frango/i, 'grilled chicken'],
-  [/carne|patinho|alcatra|bife/i, 'beef'],
-  [/peixe|til[aá]pia|salm[ãa]o/i, 'fish'],
-  [/ovo/i, 'eggs'],
-  [/whey|shake|prote[íi]na/i, 'a protein shake'],
-  [/arroz/i, 'rice'],
-  [/batata doce/i, 'sweet potato'],
-  [/batata/i, 'potato'],
-  [/p[ãa]o/i, 'whole grain bread'],
-  [/aveia/i, 'oatmeal'],
-  [/banana/i, 'banana'],
-  [/salada|alface|folhas/i, 'green salad'],
-  [/legumes|vegetais|br[óo]colis/i, 'vegetables'],
-  [/azeite/i, 'olive oil'],
-  [/pasta de amendoim|amendoim/i, 'peanut butter'],
-  [/queijo/i, 'cheese'],
-  [/fruta|ma[çc][ãa]|morango/i, 'fruit'],
-  [/caf[ée]/i, 'a cup of coffee'],
-  [/iogurte/i, 'yogurt'],
-];
-
-function describeMeal(meal: RefeicaoData): string {
-  const itens = Array.isArray(meal.itens)
-    ? meal.itens
+function itensDaRefeicao(meal: RefeicaoData): string[] {
+  return Array.isArray(meal.itens)
+    ? meal.itens.map((s) => String(s).trim()).filter(Boolean)
     : (meal.itens ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  const joined = itens.join(', ');
-  const hints = FOOD_HINTS.filter(([re]) => re.test(joined)).map(([, en]) => en);
-  const unique = Array.from(new Set(hints));
-  if (unique.length > 0) return unique.join(', ');
-  return joined || 'a healthy balanced meal';
+}
+
+// Descreve cada refeição em português (o texto será renderizado DENTRO da imagem).
+function describeMealCardPT(meal: RefeicaoData, i: number): string {
+  const nome = (meal.nome ?? `Refeição ${i}`).trim();
+  const horario = (meal.horario ?? '').toString().trim();
+  const itens = itensDaRefeicao(meal).join(', ') || 'refeição saudável';
+  return `Card ${i} — Nome: "${nome}"; Horário: "${horario}"; Alimentos: ${itens}`;
 }
 
 /**
- * UMA única imagem contendo TODAS as refeições do dia como pratos separados, lado a lado
- * (estilo colagem/grid de fotografia gastronômica). Sem texto — a lista real das refeições
- * é sobreposta por HTML.
+ * UMA única imagem que É a página inteira do cardápio: um grid de cards, cada card com a
+ * FOTO da refeição no topo e, abaixo, o nome/horário/lista de alimentos renderizados como
+ * texto DENTRO da própria imagem (estilo app de nutrição). Texto em português.
  */
 export async function generateMealsImage(refeicoes: RefeicaoData[]): Promise<string> {
-  const pratos = refeicoes
-    .map((m, i) => `${i + 1}) ${describeMeal(m)}`)
-    .join('; ');
   const n = refeicoes.length || 4;
-  const prompt = `Professional food photography: a clean, evenly-spaced grid collage of ${n} separate healthy meals,
-each on its own plate or bowl, top-down view, arranged in a neat layout on a bright modern surface.
-The ${n} distinct meals of the day are: ${pratos}.
-Each dish clearly separated with generous clean space between them, soft natural daylight,
-appetizing and fresh, editorial magazine quality, ultra realistic, high detail, consistent styling across all plates.
-No text, no words, no letters, no numbers, no labels anywhere in the image.`;
-  return generateImage(prompt, '1024x1024', MEAL_QUALITY);
+  const pratos = refeicoes.map((m, i) => describeMealCardPT(m, i + 1)).join('\n');
+  const prompt = `Professional nutrition meal plan.
+
+Create a clean, modern grid of ${n} independent meal cards.
+
+Each card represents ONE meal from:
+${pratos}
+
+For each meal card:
+
+• A professional ultra-realistic food photograph of only that meal at the top.
+• Below the photo, a clean white information section.
+• Display the meal name.
+• Display the meal time.
+• Display the foods for that meal as a bullet list.
+
+All visible text must be written in Brazilian Portuguese, exactly as provided, spelled correctly.
+
+Each meal must have its own separate card.
+Never combine multiple meals into a single photograph.
+The food image should illustrate only the corresponding meal.
+
+Arrange all cards with generous spacing on a clean white background, using a premium nutrition app aesthetic with rounded corners, subtle shadows, and consistent styling.
+
+Editorial food photography, soft natural lighting, ultra realistic, high detail.
+
+No extra decorative elements.
+No logos.
+No watermarks.`;
+  return generateImage(prompt, '1536x1024', MEAL_QUALITY);
 }

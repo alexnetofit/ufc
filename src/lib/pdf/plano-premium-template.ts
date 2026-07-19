@@ -190,6 +190,8 @@ padding:64px 72px;
 .cover-foot{ font-size:12.5px; color:rgba(255,255,255,0.6); }
 
 /* ---------- REFEIÇÕES ---------- */
+.meals-full{ display:flex; align-items:center; justify-content:center; background:#ffffff; }
+.meals-full-img{ width:100%; height:100%; object-fit:contain; display:block; }
 .meals{ display:flex; height:720px; }
 .meals-visual{ width:42%; height:720px; ${mealsBg} background-size:cover; background-position:center; position:relative; }
 .meals-visual .vlabel{ position:absolute; left:40px; bottom:40px; right:32px; color:#fff; }
@@ -233,7 +235,9 @@ ${renderMacros(opts.macros)}
 <div class="cover-foot">${opts.macros?.estimado ? 'Valores de calorias e macros são uma estimativa baseada nos dados informados. ' : ''}Elaborado com base nas informações da consulta.</div>
 </div>
 
-<div class="page meals">
+${opts.mealsImage
+  ? `<div class="page meals-full"><img class="meals-full-img" src="${opts.mealsImage}" alt="Cardápio do dia" /></div>`
+  : `<div class="page meals">
 <div class="meals-visual">
 <div class="vlabel">
 <div class="vtitle">Seu cardápio<br>do dia</div>
@@ -250,7 +254,7 @@ ${renderMealCards(data.refeicoes)}
 </div>
 <div class="meals-foot">Gerado em ${geradoEm} • baseado exclusivamente nas informações fornecidas na consulta.</div>
 </div>
-</div>
+</div>`}
 
 </body>
 </html>`;
