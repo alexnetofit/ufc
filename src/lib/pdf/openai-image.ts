@@ -3,8 +3,8 @@ import { PlanoAlimentarData, RefeicaoData } from './plano-alimentar-types';
 const OPENAI_IMAGES_URL = 'https://api.openai.com/v1/images/generations';
 // A OpenAI expõe o modelo de imagem como "gpt-image-1"; deixamos configurável caso
 // a conta use um identificador diferente (ex: uma versão mais nova).
-const MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
-const COVER_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'high';
+const MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
+const COVER_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'medium';
 const MEAL_QUALITY = process.env.OPENAI_MEAL_IMAGE_QUALITY || 'medium';
 const TIMEOUT_MS = 120_000;
 
